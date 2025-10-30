@@ -50,11 +50,6 @@ java {
     }
 }
 
-wrapper {
-    gradleVersion = '8.6'
-    distributionUrl = "https://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
-}
-
 allprojects {
     version = VERSION
     group = 'com.securosys.fireblocks'
