@@ -1,0 +1,152 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'base'
+    id 'java'
+    id 'org.springframework.boot' version '3.5.6' apply false
+    id "io.freefair.lombok" version "9.0.0" apply false
+    id 'org.unbroken-dome.test-sets'		version '4.1.0'							apply false
+    id 'com.palantir.docker' version "0.36.0" apply false
+    id 'org.flywaydb.flyway' version '11.14.0' apply false
+}
+
+
+gradle.beforeProject { Project project ->
+    project.with {
+        apply plugin: 'project-report'
+        tasks.withType(JavaCompile) {
+            options.encoding = 'UTF-8'
+            options.compilerArgs += ["-parameters"]
+        }
+        // BOM based dependency management
+        apply plugin: 'io.spring.dependency-management'
+        dependencyManagement {
+            dependencies {
+                dependency 'org.mariadb.jdbc:mariadb-java-client:3.5.6'
+                dependency group: 'org.postgresql', name: 'postgresql', version: '42.7.8'
+                dependency "org.hibernate.validator:hibernate-validator:9.0.1.Final"
+                dependency 'com.h2database:h2:2.4.240'
+                dependency "org.flywaydb:flyway-core:11.14.0"
+                dependency "org.flywaydb:flyway-mysql:11.14.0"
+                dependency 'commons-codec:commons-codec:1.19.0'
+                dependency group: 'org.flywaydb', name: 'flyway-database-postgresql', version: '11.14.0'
+                dependency 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
+                dependency "org.bouncycastle:bcprov-jdk18on:1.82"
+                dependency 'org.bouncycastle:bcpkix-jdk18on:1.82'
+                dependency 'org.bouncycastle:bcmail-jdk18on:1.82'
+                dependency 'jakarta.validation:jakarta.validation-api:3.1.1'
+                dependency 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+                dependency 'com.nimbusds:oauth2-oidc-sdk:11.29.2'
+                //dependency 'com.nimbusds:nimbus-jose-jwt:10.5'
+                dependency 'com.splunk.logging:splunk-library-javalogging:1.11.8'
+                dependency 'org.apache.commons:commons-lang3:3.19.0'
+                dependency 'org.apache.httpcomponents.client5:httpclient5:5.5'
+            }
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+wrapper {
+    gradleVersion = '8.6'
+    distributionUrl = "https://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
+}
+
+allprojects {
+    version = VERSION
+    group = 'com.securosys.fireblocks'
+    task dumpBuildProperties() {
+        description 'bump build properties relevant for our build pipeline'
+        group 'help'
+        doFirst {
+            def props = new Properties()
+            def file = file("$buildDir/build.properties")
+            new File(buildDir.absolutePath).mkdir()
+            file.createNewFile()
+            file.withWriter {
+                props.put("version", project.version)
+                props.store(it, null)
+            }
+        }
+    }
+    tasks.withType(Test) {
+        reports {
+            junitXml.mergeReruns = true
+            junitXml.outputLocation.set(file("${rootProject.buildDir}/reports/test-results"))
+        }
+    }
+
+}
+
+subprojects {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://splunk.jfrog.io/splunk/ext-releases-local'
+        }
+        maven {
+            url "https://securosys.jfrog.io/artifactory/jce-maven"
+            credentials {
+                username = project.findProperty("artifactory_user") ?: System.getenv("ARTIFACTORY_USER")
+                password = project.findProperty("artifactory_password") ?: System.getenv("ARTIFACTORY_PASSWORD")
+            }
+        }
+    }
+
+    pluginManager.withPlugin('java') {
+        apply plugin: 'org.unbroken-dome.test-sets'
+        apply plugin: 'io.spring.dependency-management'
+
+
+        tasks.withType(Jar).configureEach {
+            manifest.attributes(
+                    'Implementation-Title': project.name,
+                    'Implementation-Version': project.version,
+                    'Implementation-Vendor': 'Securosys SA'
+            )
+        }
+
+        tasks.withType(Test).configureEach { Test task ->
+            task.useJUnitPlatform()
+            task.doFirst {
+                // fetching the profile, the default is set so gradle tasks can be executed
+                def activeProfile = System.getProperty("activeTestProfile") == null ? "test" : System.getProperty("activeTestProfile")
+
+                // setting the profile
+                systemProperty "spring.profiles.active",activeProfile
+                systemProperty "jdk.sunec.disableNative", "false"
+                environment "jdk.sunec.disableNative", "false"
+                environment "SPRING_PROFILES_ACTIVE", activeProfile
+                jvmArgs '--add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED', '--add-opens=java.base/sun.security.x509=ALL-UNNAMED', '--add-opens=java.base/sun.security.pkcs=ALL-UNNAMED', '--add-opens=java.base/sun.security.util=ALL-UNNAMED'
+                println "Running ${project} tests with profile: ${activeProfile}"
+            }
+            //finalizedBy rootProject.tasks.named('aggregateTestReports')
+
+        }
+        dependencies {
+            implementation enforcedPlatform(SpringBootPlugin.BOM_COORDINATES)
+            testImplementation 'org.junit.jupiter:junit-jupiter-api'
+            testImplementation 'org.mockito:mockito-junit-jupiter'
+            testImplementation 'org.assertj:assertj-core'
+            testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+            testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        }
+        tasks.named('test') {
+            useJUnitPlatform()
+        }
+        // Set JUnit 5 as default testing platform for all Java modules
+        tasks.withType(Test).configureEach { Test task ->
+            useJUnitPlatform()
+
+            reports {
+                junitXml.outputLocation.set(file("${rootProject.buildDir}/reports/tests/${project.name}/xml"))
+                html.outputLocation.set(file("${rootProject.buildDir}/reports/tests/${project.name}/html"))
+            }
+        }
+    }
+}

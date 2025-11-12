@@ -1,0 +1,24 @@
+// SPDX-FileCopyrightText: Copyright 2025 Securosys SA
+// SPDX-License-Identifier: Apache-2.0
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation project(path: ':fireblocks-service')
+
+	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+}
+
+tasks.assemble.doLast {
+	println 'Copying resources'
+	copy {
+		from "${project(':fireblocks-service').buildDir}/resources/main/"
+		into "build/resources/main"
+		include 'logback.xml'
+	}
+}

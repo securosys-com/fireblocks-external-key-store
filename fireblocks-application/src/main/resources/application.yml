@@ -1,0 +1,63 @@
+##TSB CONFIGURATION
+tsb:
+  tsbRestApi: 'https://primusdev.cloudshsm.com'
+  tsbAccessToken: '<JWT Token>' # If you have tsb Access Token authorization to tsb Rest API, otherwise comment out or leave empty.
+  # If you have mTLS connection to tsb Rest API, otherwise comment out or leave empty.
+  tsbMTlsCertificate: ''
+  tsbMTlsKey: ''
+  apiAuthentication:
+    enabled: false # http-header authentication disabled by default
+    keyManagementToken: # Granting access to Key Generation, deletion - Endpoints: /v1/key/**
+      - ''
+    keyOperationToken: # Granting access to Cryptographic Operations like: Signing, Encrypting, Wrapping, fileEncryption, Keyblocking, KeyModification (Synchronous & Asynchronous Requests)
+      - ''
+    serviceToken: # Granting access to Service information
+      - ''
+  intervalFetchResults: 600 # in seconds, the interval in which the custom server should check for approvals
+  airGapped: false # by default is false, if it is true then the TSB without HSM is enabled
+
+##CUSTOM SERVER CONFIGURATION
+custom-server:
+  serviceName: 'SIGNING_SERVICE'  # to verify service from payload data signature in messages
+  # to verify payload signature in messages, need to be set either certificate or public key
+  fireblocksSignatureCertificate: ''
+  fireblocksSignaturePublicKey: ''
+  fireblocksAgentConfiguration:
+    apiAuthorization: 'my-secret-api-key-123'  #needs to be configured in fireblocks agent
+
+
+spring:
+  data.rest.basePath: /api
+  jpa.open-in-view: false
+  jackson.serialization.FAIL_ON_EMPTY_BEANS: false
+  jmx.enabled: false
+  h2.console.enabled: false
+  devtools.add-properties: false
+  flyway:
+    enabled: false
+  datasource:
+    #url: jdbc:mariadb://localhost:4406/securosys?allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:h2:mem:testDB;DB_CLOSE_DELAY=-1;MODE=MYSQL;NON_KEYWORDS=value
+    #url: jdbc:postgresql://localhost:5432/securosys
+    username: customserver
+    password: replaceme
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+## SWAGGER-UI Configuration
+swaggerUI.enabled: true
+
+server:
+  forward-headers-strategy: framework
+  port: ${api.port:8080}
+  tomcat:
+    max-threads: ${server.tomcat.maxThreads:10} # 10 default of a tomcat webserver
+  ssl:
+    enabled: ${tls.enabled:false}
+    # key-store
+    key-store: ${tls.keyStore} #e.g. classpath:keystore.p12
+    key-store-password: ${tls.keyStorePassword} # yourKeyStorePassword
+    key-store-type: ${tls.trustStoreType:pkcs12}
+    enabled-protocols: ${tls.enabledProtocols:TLSv1.2}

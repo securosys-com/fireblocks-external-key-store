@@ -1,0 +1,117 @@
+# This file is a template, and might need editing before it works on your project.
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Gradle.gitlab-ci.yml
+
+# This is the Gradle build system for JVM applications
+# https://gradle.org/
+# https://github.com/gradle/gradle
+
+image: gradle:alpine
+
+# Disable the Gradle daemon for Continuous Integration servers as correctness
+# is usually a priority over speed in CI environments. Using a fresh
+# runtime for each build is more reliable since the runtime is completely
+# isolated from any previous builds.
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  GIT_SUBMODULE_STRATEGY: none
+
+before_script:
+  - GRADLE_USER_HOME="$(pwd)/.gradle"
+  - export GRADLE_USER_HOME
+  - export PATH=/usr/lib/jvm/temurin-21-jdk-amd64/bin:$PATH
+
+stages:
+  - test
+  - build
+  - mirror
+
+build_job:
+  stage: build
+  tags:
+    - Java
+    - Docker
+    - SpringBoot
+  before_script:
+    - export INTERNAL_PREFIX=
+  script:
+    - ./gradlew dockerBuildArm64
+    - ./gradlew dockerBuildAmd64
+
+test_job:
+  stage: test
+  tags:
+    - Java
+    - Docker
+    - SpringBoot
+  script:
+    - ./gradlew clean test
+  artifacts:
+    when: always
+    paths:
+      - build/reports/tests/fireblocks-service/html
+    reports:
+      junit: "**/build/reports/tests/fireblocks-service/xml/*.xml"  # XML for GitLab Tests tab
+    expire_in: 7 days
+
+
+#vulnerability_scan:
+#  stage: vulnerability_scan
+#  tags:
+#    - Linux
+#    - Debian11
+#    - PortalApi
+#  before_script:
+#    - export VERSION=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
+#  script:
+#    - echo $DOCKER_HUB_PAT | docker login --username cloudsadmin --password-stdin
+#    - docker scout cves securosys-docker-build.securosys.com/fireblocks/external-key-store-application-amd64:$VERSION > vulnerability_scan.txt
+#    - docker scout recommendations securosys-docker-build.securosys.com/fireblocks/external-key-store-application-amd64:$VERSION > vulnerability_scan_recommendations.txt
+#    - docker scout cache prune -f
+#    - docker logout
+#  artifacts:
+#    when: always
+#    name: "vulnerability_scan_securosys-ska.txt"
+#    paths:
+#      - "vulnerability_scan.txt"
+#      - "vulnerability_scan_recommendations.txt"
+#    expire_in: 1 day
+
+#docker_tag_image_job:
+#  stage: push2jfrog
+#  tags:
+#    - Linux
+#    - Debian11
+#    - PortalApi
+#  before_script:
+#    - export INTERNAL_PREFIX=internal-
+#    - export PROP_PREFIX=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
+#  script:
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh securosys-docker-repository-login
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker v
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file v
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip v
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository v
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker l
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file l
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip l
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository l
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-amd64-docker-image-to-repository
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-arm64-docker-image-to-repository
+#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh securosys-docker-repository-logout
+#    - echo "Release Version Tag:" $PROP_PREFIX
+
+mirror:
+  stage: mirror
+  tags:
+    - SpringBoot
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+  # Mirror the main branch as-is to GitHub
+  script:
+    - git fetch --tags
+    - git remote add github git@github.com:securosys-com/fireblocks-external-key-store.git || true
+    - git push --tags --force github refs/remotes/origin/main:refs/heads/main

@@ -1,0 +1,1 @@
+alter table payload_signature_data MODIFY signature LONGTEXT not null;

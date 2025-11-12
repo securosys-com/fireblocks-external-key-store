@@ -1,0 +1,99 @@
+# Full template of the Securosys Custom Server configuration.
+
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/customserver
+    # url: "jdbc:h2:mem:customserver;DB_CLOSE_DELAY=-1;MODE=MYSQL;NON_KEYWORDS=value"
+    # url: jdbc:postgresql://localhost:5432/customserver
+    username: customserver
+    password: replaceme
+    hikari.maxLifetime: ${spring.datasource.hikari.maxLifetime:180000}
+    maximum-pool-size: ${spring.datasource.maximumPoolSize:10}
+    pool-name: ${spring.datasource.poolName:HikariPool}
+
+  jpa.open-in-view: false
+  datasource.driverClassName: org.mariadb.jdbc.Driver
+  #jackson.serialization.FAIL_ON_EMPTY_BEANS: false
+  #jmx.enabled: false
+  h2.console.enabled: false
+  devtools.add-properties: false
+
+  flyway:
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    locations: classpath:com/securosys/vpd/datamodel/mariadb/migration
+    baselineOnMigrate: false
+    validateOnMigrate: true
+    table: schema_version
+    sql-migration-prefix: v
+    placeholders:
+      username: ${spring.datasource.username}
+
+api:
+  port: 8080 # the port the API shall listen on
+
+server:
+  forward-headers-strategy: framework
+  port: ${api.port:8080}
+  tomcat:
+    maxThreads: 10
+
+  tls:
+    enabled: false
+
+    # Settings for letting the Custom Server terminate TLS.
+    keyStore: '' # 'file:/etc/app/config/tls/keystore.p12'
+    keyStorePassword: 'replaceme'
+    keyStoreType: pkcs12
+    enabledProtocols: TLSv1.2
+
+    # mTLS: Trust store for client authentication.
+    # Add client certificates and/or CAs to this trustStore.
+    trustStore: '' # 'file:/etc/app/config/tls/truststore.jks'
+    trustStorePassword: 'replaceme'
+    trustStoreType: jks
+    # Enum: `need` [client auth needed and mandatory], `none` [client auth not wanted], `want` [client auth wanted but not mandatory]
+    clientAuthentication: need
+
+tsb:
+  tsbRestApi: 'https://sbx-rest-api.cloudshsm.com'
+
+  # The TSB has 3 authentication options: JWT token, mTLS, and API keys.
+  # Set the ones you need, remove the others.
+  # See https://docs.securosys.com/tsb/Installation/post-installation/authentication/
+  tsbAccessToken: '<JWT Token>'
+
+  tsbMTlsCertificate: 'file:./etc/mTlsCert.pem'
+  tsbMTlsKey: 'file:./etc/mTlsKey.key'
+
+  # API keys to access the TSB.
+  # API keys can be scoped to different roles for fine-grained access control.
+  # See https://docs.securosys.com/tsb/Installation/post-installation/authentication/api-keys
+  apiAuthentication:
+    enabled: false
+    keyManagementToken:
+      - ''
+    keyOperationToken:
+      - ''
+    serviceToken:
+      - ''
+
+  # Interval in seconds in which the custom server should poll the TSB
+  intervalFetchResults: 600
+
+  # https://docs.securosys.com/tsb/Tutorials/TransactionSecurityBroker/AirGappedModeTSB/overview
+  airGapped: false
+
+custom-server:
+  # Expected service name with which the Fireblocks workspace should identify itself.
+  serviceName: ''
+
+  # Enforce that requests are signed by the Fireblocks workspace (for authenticity).
+  fireblocksSignatureCertificate: ''
+  fireblocksSignaturePublicKey: ''
+
+  fireblocksAgentConfiguration:
+    # Choose a secret value. Must be non-empty.
+    # Set the CUSTOMER_SERVER_AUTHORIZATION envvar in the Fireblocks Key Link Agent to the same value.
+    apiAuthorization: 'my-secret-api-key-123'

@@ -1,0 +1,32 @@
+services:
+
+  fireblocks_custom_server_db:
+    image: mariadb:11.8
+    container_name: fireblocks_custom_server_db
+    expose:
+      - "3306"
+    volumes:
+      - ./fireblocks_custom_server_db:/var/lib/mysql
+    environment:
+      # REPLACE with your credentials
+      MYSQL_ROOT_PASSWORD: replaceme
+      MYSQL_DATABASE: customserver
+      MYSQL_USER: customserver
+      MYSQL_PASSWORD: replaceme
+    restart: unless-stopped
+
+  fireblocks_custom_server:
+    image: securosys.jfrog.io/fireblocks/external-key-store-application:latest
+    container_name: fireblocks_custom_server
+    depends_on:
+      - fireblocks_custom_server_db
+    ports:
+      - "8080:8080"
+    volumes:
+      # place for application configuration files
+      - ./config-files:/etc/app/config:ro
+      # output folder of e.g. logfiles
+      - ./output:/etc/app/output
+    environment:
+      - logging.config=/etc/app/config/log/logback.xml
+    restart: unless-stopped

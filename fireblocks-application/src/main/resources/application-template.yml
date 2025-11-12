@@ -1,0 +1,43 @@
+##DATABASE-CONNECTION CONFIGURATION
+spring:
+  datasource:
+    url: jdbc:mariadb://fireblocks_sql:3306/securosys?allowPublicKeyRetrieval=true&sslMode=false # jdbc:mysql://<host_or_ip>:3306/securosys?useSSL=true
+    username: replace-me_db-username # REPLACE according to the `MYSQL_USER` in the docker-compose.yml file
+    password: replace-me_db-password # REPLACE according to the `MYSQL_PASSWORD` in the docker-compose.yml file
+
+##TSB CONFIGURATION
+tsb:
+  tsbRestApi: 'tsbRestApi-url'
+  tsbAccessToken: 'replace-me-tsbAccessToken' # If you have tsb Access Token authorization to tsb Rest API, otherwise comment out or leave empty.
+  # If you have mTLS connection to tsb Rest API, otherwise comment out or leave empty.
+  tsbMTlsCertificate: 'file:./etc/mTlsCert.pem'
+  tsbMTlsKey: 'file:./etc/mTlsKey.key'
+  apiAuthentication:
+    enabled: false # http-header authentication disabled by default
+    keyManagementToken: # Granting access to Key Generation, deletion - Endpoints: /v1/key/**
+      - ''
+    keyOperationToken: # Granting access to Cryptographic Operations like: Signing, Encrypting, Wrapping, fileEncryption, Keyblocking, KeyModification (Synchronous & Asynchronous Requests)
+      - ''
+    serviceToken: # Granting access to Service information
+      - ''
+
+## SWAGGER-UI Configuration
+swaggerUI.enabled: true
+
+## Trust-Store configuration (m)TLS
+server:
+  port: 8081
+  ssl:
+    enabled: ${tls_enabled:false}
+    # key-store
+    key-store: ${tls_key-store} #e.g. classpath:keystore.p12
+    key-store-password: ${tls_key-store-password} # yourKeyStorePassword
+    key-store-type: ${tls_key-store-type:pkcs12}
+    enabled-protocols: ${tls_enabled-protocols:TLSv1.2}
+    # trust-store
+    trust-store: ${tls_trust-store} # e.g. classpath:truststore.jks
+    trust-store-password: ${tls_trust-store-password} # yourTrustStorePassword
+    trust-store-type: ${tls_trust-store-type:jks}
+    client-auth: ${tls_client-auth:need}
+
+#springdoc.swagger-ui.csrf.enabled: true

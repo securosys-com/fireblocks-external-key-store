@@ -1,0 +1,20 @@
+# Minimal Securosys Custom Server configuration.
+# For all options, see the template.yml.
+
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/customserver
+    username: customserver
+    password: replaceme
+
+tsb:
+  tsbRestApi: 'https://sbx-rest-api.cloudshsm.com'
+  tsbAccessToken: '<JWT Token>'
+
+custom-server:
+  fireblocksAgentConfiguration:
+    # Choose a secret value. Must be non-empty.
+    # Set the CUSTOMER_SERVER_AUTHORIZATION envvar in the Fireblocks Key Link Agent to the same value.
+    apiAuthorization: 'my-secret-api-key-123'
+
+swaggerUI.enabled: true

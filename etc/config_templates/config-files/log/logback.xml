@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<!-- infrastructure logging (journalctl, docker, IDE output) -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<withJansi>true</withJansi>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss,SSS} %highlight(%-5.5p) [%15.15t] %cyan([%30.30c]) %X{indent}%m%n</pattern>
+		</encoder>
+	</appender>
+
+	<!-- history logging, disabled for openshift/docker deployment -->
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>/etc/app/output/service.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">\
+			<fileNamePattern>/etc/app/output/service-%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>13</maxHistory>
+			<totalSizeCap>100MB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d %-5.5p [%15.15t] [%30.30c] %X{indent}%m%n</pattern>
+		</encoder>
+	</appender>
+
+	<!-- profile -->
+	<!-- Uncomment if you want to "debug" the Fireblocks: -->
+	<!-- <logger name="com.securosys.fireblocks" level="DEBUG" /> -->
+	<!-- <logger name="net.javacrumbs.shedlock" level="DEBUG" /> -->
+
+	<!-- channels -->
+	<root level="INFO"> <!-- set the logging level for all appenders -->
+		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="FILE" />
+	</root>
+
+</configuration>
