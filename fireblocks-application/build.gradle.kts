@@ -68,9 +68,21 @@ jib {
             "-Dcom.securosys.primus.jce.logoutCloseReaderGracetimeMillis=0",
             "-Dcom.securosys.primus.jce.cutLmsSignaturePrefix=false",
             "-Dcom.securosys.primus.jce.fallBackToSignatureLessLogFetching=true",
+            "-Dspring.config.additional-location=/etc/app/config/",
+            "-Dlogging.config=/etc/app/config/logback.xml",
             "-XX:MinRAMPercentage=70",
             "-XX:InitialRAMPercentage=70",
             "-XX:MaxRAMPercentage=70"
         )
+    }
+    extraDirectories {
+        paths {
+            path {
+                setFrom("src/main/resources")
+                includes.add("logback.xml")
+                includes.add("application.yml")
+                into = "/etc/app/config"
+            }
+        }
     }
 }
