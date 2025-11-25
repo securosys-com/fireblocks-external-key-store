@@ -74,6 +74,13 @@ jib {
             "-XX:InitialRAMPercentage=70",
             "-XX:MaxRAMPercentage=70"
         )
+        // https://specs.opencontainers.org/image-spec/annotations/
+        labels = mapOf(
+            "org.opencontainers.image.source" to "https://github.com/securosys-com/fireblocks-external-key-store",
+            "org.opencontainers.image.version" to "${project.version}",
+            "org.opencontainers.image.description" to "Fireblocks External Key Store Application",
+            "org.opencontainers.image.vendor" to "Securosys SA"
+        )
     }
     extraDirectories {
         paths {
