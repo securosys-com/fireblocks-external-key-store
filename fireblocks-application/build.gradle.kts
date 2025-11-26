@@ -59,6 +59,9 @@ jib {
     container {
         // current timestamp is not reproduible, but keeps track of build time in the image metadata
         creationTime = "USE_CURRENT_TIMESTAMP"
+        environment = mapOf(
+           "LOGGING_CONFIG" to "/etc/app/config/logback.xml"
+        )
         jvmFlags = listOf(
             "-Djava.security.egd=file:/dev/./urandom",
             "--add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED",
@@ -69,7 +72,6 @@ jib {
             "-Dcom.securosys.primus.jce.cutLmsSignaturePrefix=false",
             "-Dcom.securosys.primus.jce.fallBackToSignatureLessLogFetching=true",
             "-Dspring.config.additional-location=/etc/app/config/",
-            "-Dlogging.config=/etc/app/config/logback.xml",
             "-XX:MinRAMPercentage=70",
             "-XX:InitialRAMPercentage=70",
             "-XX:MaxRAMPercentage=70"
