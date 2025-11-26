@@ -63,6 +63,7 @@ jib {
            "LOGGING_CONFIG" to "/app/resources/logback.xml"
         )
         jvmFlags = listOf(
+            "-Dfile.encoding=UTF-8",
             "-Djava.security.egd=file:/dev/./urandom",
             "--add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED",
             "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
