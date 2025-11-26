@@ -60,7 +60,7 @@ jib {
         // current timestamp is not reproduible, but keeps track of build time in the image metadata
         creationTime = "USE_CURRENT_TIMESTAMP"
         environment = mapOf(
-           "LOGGING_CONFIG" to "/etc/app/config/logback.xml"
+           "LOGGING_CONFIG" to "/app/resources/logback.xml"
         )
         jvmFlags = listOf(
             "-Djava.security.egd=file:/dev/./urandom",
@@ -71,7 +71,6 @@ jib {
             "-Dcom.securosys.primus.jce.logoutCloseReaderGracetimeMillis=0",
             "-Dcom.securosys.primus.jce.cutLmsSignaturePrefix=false",
             "-Dcom.securosys.primus.jce.fallBackToSignatureLessLogFetching=true",
-            "-Dspring.config.additional-location=/etc/app/config/",
             "-XX:MinRAMPercentage=70",
             "-XX:InitialRAMPercentage=70",
             "-XX:MaxRAMPercentage=70"
@@ -83,15 +82,5 @@ jib {
             "org.opencontainers.image.description" to "Fireblocks External Key Store Application",
             "org.opencontainers.image.vendor" to "Securosys SA"
         )
-    }
-    extraDirectories {
-        paths {
-            path {
-                setFrom("src/main/resources")
-                includes.add("logback.xml")
-                includes.add("application.yml")
-                into = "/etc/app/config"
-            }
-        }
     }
 }
