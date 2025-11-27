@@ -12,6 +12,10 @@ tsb:
   tsbAccessToken: '<JWT Token>'
 
 custom-server:
+  # Expected service name with which the Fireblocks workspace should identify itself.
+  serviceName: ''
+  # Enforce that requests are signed by the Fireblocks workspace (for authenticity).
+  fireblocksSignatureCertificate: 'file:./etc/payload_validation_cert.pem'
   fireblocksAgentConfiguration:
     # Choose a secret value. Must be non-empty.
     # Set the CUSTOMER_SERVER_AUTHORIZATION envvar in the Fireblocks Key Link Agent to the same value.

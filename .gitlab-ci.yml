@@ -21,7 +21,7 @@ variables:
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
   - export GRADLE_USER_HOME
-  - export PATH=/usr/lib/jvm/temurin-21-jdk-amd64/bin:$PATH
+  - export PATH=/usr/lib/jvm/temurin-17-jdk-amd64/bin:$PATH
 
 stages:
   - test
@@ -65,10 +65,22 @@ test_job:
 #    - PortalApi
 #  before_script:
 #    - export VERSION=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
+#    - export DOCKER_IMAGE_FULL_URL=${JFROG_ARTIFACTORY_URL}/${INTERNAL_PREFIX}${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:$VERSION
 #  script:
+#    - ./gradlew clean build -x test dockerBuildAmd64
 #    - echo $DOCKER_HUB_PAT | docker login --username cloudsadmin --password-stdin
-#    - docker scout cves securosys-docker-build.securosys.com/fireblocks/external-key-store-application-amd64:$VERSION > vulnerability_scan.txt
-#    - docker scout recommendations securosys-docker-build.securosys.com/fireblocks/external-key-store-application-amd64:$VERSION > vulnerability_scan_recommendations.txt
+#    - |
+#      docker scout cves \
+#        --format markdown \
+#        --only-severity critical \
+#        --only-severity high \
+#        $DOCKER_IMAGE_FULL_URL \
+#        > vulnerability_scan.txt || true
+#    - |
+#      docker scout recommendations \
+#        --format markdown \
+#        $DOCKER_IMAGE_FULL_URL \
+#        > vulnerability_scan_recommendations.txt || true
 #    - docker scout cache prune -f
 #    - docker logout
 #  artifacts:

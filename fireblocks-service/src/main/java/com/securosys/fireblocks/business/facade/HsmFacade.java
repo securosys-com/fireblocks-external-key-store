@@ -56,22 +56,6 @@ public class HsmFacade {
             default -> throw new BusinessException("Unsupported algorithm: " + algorithm, BusinessReason.ERROR_INVALID_ALGORITHM);
         }
 
-//        if ("EDDSA".equalsIgnoreCase(tsbSigningAlgorithm)) {
-//            try {
-//                byte[] rawBytes = hexStringToByteArray(payload);
-//
-//                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-//                byte[] hashed = digest.digest(rawBytes);
-//                log.info("Message pre-hashed with SHA-256 for EDDSA");
-//
-//                payloadForTsb = Base64.getEncoder().encodeToString(hashed);
-//                payloadType = "UNSPECIFIED";
-//            } catch (NoSuchAlgorithmException e) {
-//                throw new RuntimeException("Failed to prehash HEX message for EDDSA", e);
-//            }
-//        }
-
-        //String payloadBase64 = Base64.getEncoder().encodeToString(messageToSignBytes);
 
         String signatureId = tsbService.sign(label, password, payload, "HEX", "RAW", tsbSigningAlgorithm, metadata, metadataSignature);
         RequestStatusResponseDto requestStatusResponseDto = tsbService.getRequest(signatureId);
@@ -86,67 +70,24 @@ public class HsmFacade {
         return Base64.getEncoder().encodeToString(publicKey.getEncoded());
     }
 
-    public boolean verify(String payloadSignature, String serviceName, String payload) {
+    public boolean verify(byte[] payloadSignature, String serviceName, String payload) {
 
         try {
             if (!properties.getServiceName().equals(serviceName)){
                 return false;
             }
 
-            if (Security.getProvider("BC") == null) {
-                Security.addProvider(new BouncyCastleProvider());
-            }
-
             PublicKey publicKey = getPublicKey();
-            String algorithm = getSignatureAlgorithm(publicKey);
 
-            byte[] signatureBytes = HexFormat.of().parseHex(payloadSignature);
-
-            if (algorithm.equals("SHA256withECDSA") && signatureBytes.length == 64) {
-                signatureBytes = convertRawEcdsaToDer(signatureBytes);
-            }
-
-            Signature sig = Signature.getInstance(algorithm, "BC");
+            Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initVerify(publicKey);
             sig.update(payload.getBytes(StandardCharsets.UTF_8));
 
-            return sig.verify(signatureBytes);
+            return sig.verify(payloadSignature);
 
         } catch (Exception e) {
             return false;
         }
-    }
-
-//    public boolean verifyEd25519(String payloadSignatureHex, String payload, PublicKey publicKey) {
-//        try {
-//            byte[] signatureBytes = Hex.decode(payloadSignatureHex);
-//            byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
-//
-//            Signature sig = Signature.getInstance("Ed25519", "BC");
-//            sig.initVerify(publicKey);
-//            sig.update(payloadBytes);
-//            return sig.verify(signatureBytes);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return false;
-//        }
-//    }
-
-    private byte[] convertRawEcdsaToDer(byte[] rawSignature) throws IOException {
-        if (rawSignature.length != 64) {
-            return rawSignature; // already DER or invalid length
-        }
-
-        int half = rawSignature.length / 2;
-        BigInteger r = new BigInteger(1, Arrays.copyOfRange(rawSignature, 0, half));
-        BigInteger s = new BigInteger(1, Arrays.copyOfRange(rawSignature, half, rawSignature.length));
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        DERSequenceGenerator seq = new DERSequenceGenerator(bos);
-        seq.addObject(new ASN1Integer(r));
-        seq.addObject(new ASN1Integer(s));
-        seq.close();
-        return bos.toByteArray();
     }
 
     private PublicKey getPublicKey() {
@@ -220,14 +161,4 @@ public class HsmFacade {
         return requestStatusResponseDto.getResult();
     }
 
-    private static String getSignatureAlgorithm(PublicKey publicKey) {
-        String alg = publicKey.getAlgorithm();
-        return switch (alg) {
-            case "RSA" -> "SHA256withRSA";
-            case "EC" -> "SHA256withECDSA";
-            case "Ed25519" -> "Ed25519"; // bez SHA
-            default -> throw new BusinessException("Unsupported key algorithm: " + alg,
-                    BusinessReason.ERROR_INVALID_ALGORITHM);
-        };
-    }
 }

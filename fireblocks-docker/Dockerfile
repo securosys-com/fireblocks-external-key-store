@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:17.0.17_10-jre-ubi10-minimal
 
 ENV spring.config.additional-location "/etc/app/config/"
 ENV logging.config "/etc/app/config/logback.xml"

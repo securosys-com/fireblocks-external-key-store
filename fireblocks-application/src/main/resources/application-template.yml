@@ -21,6 +21,19 @@ tsb:
     serviceToken: # Granting access to Service information
       - ''
 
+custom-server:
+  # Expected service name with which the Fireblocks workspace should identify itself.
+  serviceName: ''
+
+  # Enforce that requests are signed by the Fireblocks workspace (for authenticity).
+  fireblocksSignatureCertificate: ''
+  fireblocksSignaturePublicKey: ''
+
+  fireblocksAgentConfiguration:
+    # Choose a secret value. Must be non-empty.
+    # Set the CUSTOMER_SERVER_AUTHORIZATION envvar in the Fireblocks Key Link Agent to the same value.
+    apiAuthorization: 'my-secret-api-key-123'
+
 ## SWAGGER-UI Configuration
 swaggerUI.enabled: true
 

@@ -8,6 +8,15 @@ configurations {
 	deployment
 }
 
+def dockerImageName = System.getenv("DOCKER_IMAGE_NAME");
+def artifactoryUrl= System.getenv("JFROG_ARTIFACTORY_URL");
+def internalPrefix = System.getenv("INTERNAL_PREFIX");
+
+if(internalPrefix==null){
+    internalPrefix=""
+}
+def artifactoryRealName= internalPrefix+System.getenv("JFROG_REPOSITORY_REAL_NAME");
+
 dependencies {
 	deployment project(path: ':fireblocks-application', configuration: 'bootArchives')
 }
@@ -33,20 +42,46 @@ task prepareDockerContext(type: Copy) {
 	}
 }
 
+def imageName = "${dockerImageName}:${project.version}";
+def artifactoryName = "${artifactoryUrl}/${artifactoryRealName}/";
+
+docker {
+    name "${artifactoryName}${imageName}"
+    dockerfile file("Dockerfile")
+    buildArgs(['PLATFORM': 'linux/amd64'])
+    copySpec.from(unpackBootJar.outputs).into("install")
+}
+
 task dockerBuildAmd64(type: Exec) {
-	dependsOn prepareDockerContext
-	workingDir "build/docker"
-	commandLine 'docker', 'buildx', 'build', '--platform', 'linux/amd64',
-			'-t', "securosys-docker-build.securosys.com/fireblocks/external-key-store-application-amd64:${project.version}", "."
-			//'--push', '.'
+    dependsOn prepareDockerContext
+    workingDir "build/docker"
+    def dockerImageNameAmd64 = System.getenv("DOCKER_IMAGE_NAME");
+    def artifactoryUrlAmd64= System.getenv("JFROG_ARTIFACTORY_URL");
+    def imageNameAmd64 = "${dockerImageNameAmd64}:${project.version}";
+    def artifactoryRealNameAmd64= internalPrefix+System.getenv("JFROG_REPOSITORY_REAL_NAME");
+    def artifactoryNameAmd64 = "${artifactoryUrlAmd64}/${artifactoryRealNameAmd64}/";
+
+    def tagAmd64 = "${artifactoryNameAmd64}${imageNameAmd64}"
+    println "Building Docker image: ${tagAmd64}"
+
+    commandLine "docker", "build", "--no-cache", "--platform=linux/amd64", ".",
+            "-t", tagAmd64
 }
 
 task dockerBuildArm64(type: Exec) {
-	dependsOn prepareDockerContext
-	workingDir "build/docker"
-	commandLine 'docker', 'buildx', 'build', '--platform', 'linux/arm64',
-			'-t', "securosys-docker-build.securosys.com/fireblocks/external-key-store-application-arm64:${project.version}", "."
-			//'--push', '.'
+    dependsOn prepareDockerContext
+    workingDir "build/docker"
+    def dockerImageNameArm64 = System.getenv("DOCKER_IMAGE_NAME");
+    def artifactoryUrlArm64= System.getenv("JFROG_ARTIFACTORY_URL");
+    def imageNameArm64 = "${dockerImageNameArm64}:${project.version}";
+    def artifactoryRealNameArm64= internalPrefix+System.getenv("JFROG_REPOSITORY_REAL_NAME");
+    def artifactoryNameArm64 = "${artifactoryUrlArm64}/${artifactoryRealNameArm64}/";
+
+    def tagArm64 = "${artifactoryNameArm64}${imageNameArm64}"
+    println "Building Docker image: ${tagArm64}"
+
+    commandLine "docker", "build", "--no-cache", '--platform=linux/arm64', ".",
+            "-t", tagArm64
 }
 
 buildscript {

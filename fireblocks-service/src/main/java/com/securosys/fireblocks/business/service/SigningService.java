@@ -70,25 +70,26 @@ public class SigningService {
             envelopeService.save(envelope);
 
             try {
-                //String rawPayload = envelope.getMessage().getPayload();
                 String service = envelope.getMessage().getPayloadSignatureData().getService();
                 String payloadSignature = envelope.getMessage().getPayloadSignatureData().getSignature();
+                byte[] signatureBytes = HexFormat.of().parseHex(payloadSignature);
                 log.info("Raw payload: {}", rawPayload);
 
-//                if (properties.isVerifySignatures() && !verifySignature(payloadSignature, service, rawPayload)) {
-//                    log.error("Invalid signature for requestId {}", requestId);
-//                    statuses.add(buildFailedStatus(envelope, requestId));
-//                    continue;
-//                }
+                if (properties.isVerifySignatures() && !verifySignature(signatureBytes, service, rawPayload)) {
+                    log.error("Invalid signature for requestId {}", requestId);
+                    statuses.add(buildFailedStatus(envelope, requestId));
+                    continue;
+                }
 
                 JsonNode payloadNode = objectMapper.readTree(rawPayload);
-                //String publicKeyPemValue = hsmFacade.getPublicKeyString();
+                String publicKeyPemValue = hsmFacade.getPublicKeyString();
 
                 if (!payloadNode.isObject()) {
                     throw new BusinessException("Expected JSON object as rawPayload", BusinessReason.ERROR_INVALID_JSON);
                 }
 
-                //((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
                 ((ObjectNode) payloadNode).put("serviceName", service);
                 ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
 
@@ -104,7 +105,7 @@ public class SigningService {
                 String status = MessageStatus.FAILED;
                 String tsbRequestId = "";
                 String metadataBase64 = Base64.getEncoder().encodeToString(updatedRawPayload.getBytes(StandardCharsets.UTF_8));
-                String metadataSignatureBase64 = Base64.getEncoder().encodeToString(payloadSignature.getBytes(StandardCharsets.UTF_8));
+                String metadataSignatureBase64 = Base64.getEncoder().encodeToString(signatureBytes);
 
                 for (MessageToSign msg : payload.getMessagesToSign()) {
                     log.info("Message to sign: {}", msg);
@@ -120,8 +121,8 @@ public class SigningService {
                     log.info("TSB response: {}", response);
 
                     if (response.getResult() != null){
-                        byte[] signatureBytes = Base64.getDecoder().decode(response.getResult());
-                        String signatureHex = HexFormat.of().formatHex(signatureBytes);
+                        byte[] signatureResponseBytes = Base64.getDecoder().decode(response.getResult());
+                        String signatureHex = HexFormat.of().formatHex(signatureResponseBytes);
                         log.info("Decoded signature (HEX): {}", signatureHex);
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), signatureHex));
                     } else {
@@ -167,7 +168,7 @@ public class SigningService {
         return failed;
     }
 
-    private boolean verifySignature(String signature, String service, String rawPayload) {
+    private boolean verifySignature(byte[] signature, String service, String rawPayload) {
         return hsmFacade.verify(signature, service, rawPayload);
     }
 
@@ -219,21 +220,24 @@ public class SigningService {
             try {
                 String rawPayload = envelope.getMessage().getPayload();
                 String payloadSignature = envelope.getMessage().getPayloadSignatureData().getSignature();
+                byte[] signatureBytes = HexFormat.of().parseHex(payloadSignature);
+                String service = envelope.getMessage().getPayloadSignatureData().getService();
 
-//                if (properties.isVerifySignatures() && !verifySignature(payloadSignature, service, rawPayload)) {
-//                    log.error("Invalid signature for requestId {}", requestId);
-//                    statuses.add(buildFailedStatus(envelope, requestId));
-//                    continue;
-//                }
+                if (properties.isVerifySignatures() && !verifySignature(signatureBytes, service, rawPayload)) {
+                    log.error("Invalid signature for requestId {}", requestId);
+                    buildFailedStatus(envelope, requestId);
+                    continue;
+                }
 
                 JsonNode payloadNode = objectMapper.readTree(rawPayload);
-                //String publicKeyPemValue = hsmFacade.getPublicKeyString();
+                String publicKeyPemValue = hsmFacade.getPublicKeyString();
 
                 if (!payloadNode.isObject()) {
                     throw new BusinessException("Expected JSON object as rawPayload", BusinessReason.ERROR_INVALID_JSON);
                 }
 
-                //((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
                 ((ObjectNode) payloadNode).put("serviceName", envelope.getMessage().getPayloadSignatureData().getService());
                 ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
 
@@ -245,7 +249,7 @@ public class SigningService {
                 String status = MessageStatus.FAILED;
                 String tsbRequestId = "";
                 String metadataBase64 = Base64.getEncoder().encodeToString(updatedRawPayload.getBytes(StandardCharsets.UTF_8));
-                String metadataSignatureBase64 = Base64.getEncoder().encodeToString(payloadSignature.getBytes(StandardCharsets.UTF_8));
+                String metadataSignatureBase64 = Base64.getEncoder().encodeToString(signatureBytes);
 
                 for (MessageToSign msg : payload.getMessagesToSign()) {
 
@@ -258,8 +262,8 @@ public class SigningService {
                             metadataSignatureBase64
                     );
                     if (response.getResult() != null){
-                        byte[] signatureBytes = Base64.getDecoder().decode(response.getResult());
-                        String signatureHex = HexFormat.of().formatHex(signatureBytes);
+                        byte[] signatureResponseBytes = Base64.getDecoder().decode(response.getResult());
+                        String signatureHex = HexFormat.of().formatHex(signatureResponseBytes);
                         log.info("Decoded signature (HEX): {}", signatureHex);
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), signatureHex));
                     } else {
