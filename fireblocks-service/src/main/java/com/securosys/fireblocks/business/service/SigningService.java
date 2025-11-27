@@ -82,16 +82,18 @@ public class SigningService {
                 }
 
                 JsonNode payloadNode = objectMapper.readTree(rawPayload);
-                String publicKeyPemValue = hsmFacade.getPublicKeyString();
 
                 if (!payloadNode.isObject()) {
                     throw new BusinessException("Expected JSON object as rawPayload", BusinessReason.ERROR_INVALID_JSON);
                 }
 
-                ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
-                ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
-                ((ObjectNode) payloadNode).put("serviceName", service);
-                ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
+                if (properties.isVerifySignatures()){
+                    String publicKeyPemValue = hsmFacade.getPublicKeyString();
+                    ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                    ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
+                    ((ObjectNode) payloadNode).put("serviceName", service);
+                    ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
+                }
 
                 String updatedRawPayload = objectMapper.writeValueAsString(payloadNode);
 
@@ -230,16 +232,18 @@ public class SigningService {
                 }
 
                 JsonNode payloadNode = objectMapper.readTree(rawPayload);
-                String publicKeyPemValue = hsmFacade.getPublicKeyString();
 
                 if (!payloadNode.isObject()) {
                     throw new BusinessException("Expected JSON object as rawPayload", BusinessReason.ERROR_INVALID_JSON);
                 }
 
-                ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
-                ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
-                ((ObjectNode) payloadNode).put("serviceName", envelope.getMessage().getPayloadSignatureData().getService());
-                ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
+                if (properties.isVerifySignatures()){
+                    String publicKeyPemValue = hsmFacade.getPublicKeyString();
+                    ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
+                    ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
+                    ((ObjectNode) payloadNode).put("serviceName", service);
+                    ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
+                }
 
                 String updatedRawPayload = objectMapper.writeValueAsString(payloadNode);
 
