@@ -3,8 +3,7 @@
 
 package com.securosys.fireblocks.business.facade;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.securosys.fireblocks.business.dto.response.KeyAttributesDto;
 import com.securosys.fireblocks.business.dto.response.LicenseResponseDto;
 import com.securosys.fireblocks.business.dto.response.RequestStatusResponseDto;
 import com.securosys.fireblocks.business.exceptions.BusinessException;
@@ -15,21 +14,12 @@ import com.securosys.fireblocks.configuration.CustomServerProperties;
 import com.securosys.fireblocks.configuration.TsbProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.asn1.ASN1Integer;
-import org.bouncycastle.asn1.DERSequenceGenerator;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.Hex;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -42,9 +32,10 @@ public class HsmFacade {
     private final TsbProperties tsbProperties;
     private final CryptoUtil cryptoUtil;
 
-    public String generateKeyPair(String label, String password, String algorithm, int size) {
-        tsbService.createOrUpdateKey(label, password, algorithm, null, size);
-        return tsbService.getPublicKey(label, password);
+    public String generateKeyPair(String label, String password, String algorithm, String curveOid, int size) {
+        tsbService.createOrUpdateKey(label, password, algorithm, curveOid, size);
+        KeyAttributesDto keyAttributes = tsbService.getPublicKey(label, password);
+        return keyAttributes.getPublicKey();
     }
 
     public RequestStatusResponseDto sign(String label, String password, String payload, String algorithm, String metadata, String metadataSignature) {

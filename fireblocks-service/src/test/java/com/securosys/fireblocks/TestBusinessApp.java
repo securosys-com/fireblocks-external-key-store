@@ -7,6 +7,7 @@ import com.securosys.fireblocks.business.dto.ReasonBasedExceptionDto;
 import com.securosys.fireblocks.business.dto.customServer.MessagesRequest;
 import com.securosys.fireblocks.business.dto.customServer.MessagesStatusRequest;
 import com.securosys.fireblocks.business.dto.customServer.MessagesStatusResponse;
+import com.securosys.fireblocks.business.dto.request.CreateValidationKeyRequest;
 import com.securosys.fireblocks.business.dto.request.CreateValidationsRequest;
 import com.securosys.fireblocks.business.dto.request.ProofOfOwnershipRequest;
 import com.securosys.fireblocks.business.dto.request.ValidationProofOfOwnershipRequest;
@@ -63,24 +64,25 @@ public class TestBusinessApp {
     // HELPERS CONTROLLER
     // ======================================================
 
-    private static ValidatableResponse sendCreateValidationKeyRequest() {
+    private static ValidatableResponse sendCreateValidationKeyRequest(CreateValidationKeyRequest request) {
         return RestAssured.given()
                 .contentType(ContentType.JSON)
+                .body(request)
                 .log().all()
                 .post("/createValidationKey")
                 .then()
                 .log().all();
     }
 
-    public static ReasonBasedExceptionDto sendInvalidCreateValidationKeyRequest(HttpStatus expectedStatus) {
-        return sendCreateValidationKeyRequest()
+    public static ReasonBasedExceptionDto sendInvalidCreateValidationKeyRequest(CreateValidationKeyRequest request, HttpStatus expectedStatus) {
+        return sendCreateValidationKeyRequest(request)
                 .statusCode(expectedStatus.value())
                 .extract()
                 .as(ReasonBasedExceptionDto.class);
     }
 
-    public static CreateValidationKeyResponse sendValidCreateValidationKeyRequest() {
-        return sendCreateValidationKeyRequest()
+    public static CreateValidationKeyResponse sendValidCreateValidationKeyRequest(CreateValidationKeyRequest request) {
+        return sendCreateValidationKeyRequest(request)
                 .statusCode(HttpStatus.CREATED.value())
                 .extract()
                 .as(CreateValidationKeyResponse.class);

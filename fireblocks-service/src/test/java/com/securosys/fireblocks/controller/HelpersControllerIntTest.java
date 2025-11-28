@@ -6,6 +6,7 @@ package com.securosys.fireblocks.controller;
 import com.securosys.fireblocks.IntTestBase;
 import com.securosys.fireblocks.TestBusinessApp;
 import com.securosys.fireblocks.business.dto.ReasonBasedExceptionDto;
+import com.securosys.fireblocks.business.dto.request.CreateValidationKeyRequest;
 import com.securosys.fireblocks.business.dto.request.CreateValidationsRequest;
 import com.securosys.fireblocks.business.dto.request.ProofOfOwnershipRequest;
 import com.securosys.fireblocks.business.dto.request.ValidationProofOfOwnershipRequest;
@@ -59,7 +60,9 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.3 Execute create validation key → should succeed")
     void executeCreateValidationKey_shouldSucceed() {
         tsbService.deleteKey(VALIDATION_KEY);
-        CreateValidationKeyResponse response = TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest request  = new CreateValidationKeyRequest();
+        request.setAlgorithm("RSA");
+        CreateValidationKeyResponse response = TestBusinessApp.sendValidCreateValidationKeyRequest(request);
         assertThat(response).isNotNull();
         assertThat(response.getPublicKeyPem()).contains("-----BEGIN PUBLIC KEY-----");
     }
@@ -68,9 +71,11 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.4 Execute create validation key when it already exists → should fail")
     void executeCreateValidationKey_shouldFailAlreadyExists() {
         tsbService.deleteKey(VALIDATION_KEY);
-        TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest request  = new CreateValidationKeyRequest();
+        request.setAlgorithm("RSA");
+        TestBusinessApp.sendValidCreateValidationKeyRequest(request);
 
-        ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(HttpStatus.BAD_REQUEST);
+        ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(request,HttpStatus.BAD_REQUEST);
 
         assertThat(response).isNotNull();
         assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING.getReason());
@@ -81,7 +86,10 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.5 Execute create validation with EC key → should succeed")
     void executeCreateValidationEC_shouldSucceed() {
         tsbService.deleteKey(VALIDATION_KEY);
-        TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
+        keyRequest.setAlgorithm("EC");
+        keyRequest.setCurveOid("1.3.132.0.10");
+        TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
 
         CreateValidationsRequest request = new CreateValidationsRequest();
         request.setAssetKeyName(TEST_KEY_EC);
@@ -140,7 +148,9 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.8 Execute create validation with invalid key → should fail")
     void executeCreateValidationWithInvalidKey_shouldFail() {
         tsbService.deleteKey(VALIDATION_KEY);
-        TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
+        keyRequest.setAlgorithm("RSA");
+        TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
 
         CreateValidationsRequest request = new CreateValidationsRequest();
         request.setAssetKeyName("FireblocksInvalidKey");
@@ -196,7 +206,10 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.11 Execute create validation with ED key → should succeed")
     void executeCreateValidationED_shouldSucceed() {
         tsbService.deleteKey(VALIDATION_KEY);
-        TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
+        keyRequest.setAlgorithm("ED");
+        keyRequest.setCurveOid("1.3.101.112");
+        TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
 
         CreateValidationsRequest request = new CreateValidationsRequest();
         request.setAssetKeyName(TEST_KEY_ED);
@@ -213,7 +226,9 @@ class HelpersControllerIntTest extends IntTestBase {
     @DisplayName("2.5.1.12 Execute create validation with invalid algorithm → should fail")
     void executeCreateValidationWithInvalidAlgorithm_shouldFail() {
         tsbService.deleteKey(VALIDATION_KEY);
-        TestBusinessApp.sendValidCreateValidationKeyRequest();
+        CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
+        keyRequest.setAlgorithm("RSA");
+        TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
 
         CreateValidationsRequest request = new CreateValidationsRequest();
         request.setAssetKeyName(TEST_KEY_ED);

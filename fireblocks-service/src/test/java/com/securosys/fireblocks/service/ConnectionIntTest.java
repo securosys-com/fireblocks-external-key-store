@@ -7,6 +7,7 @@ import com.securosys.fireblocks.IntTestBase;
 import com.securosys.fireblocks.TestBusinessApp;
 import com.securosys.fireblocks.Util;
 import com.securosys.fireblocks.business.dto.ReasonBasedExceptionDto;
+import com.securosys.fireblocks.business.dto.request.CreateValidationKeyRequest;
 import com.securosys.fireblocks.business.exceptions.BusinessReason;
 import com.securosys.fireblocks.business.facade.HsmFacade;
 import com.securosys.fireblocks.business.service.MtlsClientFactory;
@@ -67,7 +68,7 @@ class ConnectionIntTest extends IntTestBase {
         ReflectionTestUtils.setField(tsbProperties, "apiAuthentication", validKeys);
 
         try {
-            String response = hsmFacade.generateKeyPair(VALIDATION_KEY, null, "RSA", 2048 );
+            String response = hsmFacade.generateKeyPair(VALIDATION_KEY, null, "RSA", null,2048 );
 
             assertThat(response).isNotNull();
         } finally {
@@ -90,7 +91,9 @@ class ConnectionIntTest extends IntTestBase {
         ReflectionTestUtils.setField(tsbProperties, "apiAuthentication", validKeys);
 
         try {
-            ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(HttpStatus.BAD_REQUEST);
+            CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
+            keyRequest.setAlgorithm("RSA");
+            ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(keyRequest, HttpStatus.BAD_REQUEST);
 
             assertThat(response).isNotNull();
             assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_OPERATION_FORBIDDEN.getReason());
@@ -122,7 +125,7 @@ class ConnectionIntTest extends IntTestBase {
 
             mtlsClientFactory.init();
 
-            String response = hsmFacade.generateKeyPair(VALIDATION_KEY, null, "RSA", 2048 );
+            String response = hsmFacade.generateKeyPair(VALIDATION_KEY, null, "RSA",null,2048 );
 
             assertThat(response).isNotNull();
         } finally {

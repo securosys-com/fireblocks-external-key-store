@@ -3,6 +3,7 @@
 
 package com.securosys.fireblocks.business.controller;
 
+import com.securosys.fireblocks.business.dto.request.CreateValidationKeyRequest;
 import com.securosys.fireblocks.business.dto.request.CreateValidationsRequest;
 import com.securosys.fireblocks.business.dto.request.ProofOfOwnershipRequest;
 import com.securosys.fireblocks.business.dto.request.ValidationProofOfOwnershipRequest;
@@ -42,14 +43,14 @@ public class HelpersController extends BaseController{
 
     @PostMapping(value = "/createValidationKey", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "Create a validation key",
-            description = "Creates an RSA key that can be used as the validation key."
+            description = "Creates key that can be used as the validation key."
                 + " The key label is the fixed value \"FIREBLOCKS_VALIDATION_KEY\"."
                 + " Returns the public key in PEM format. Onboard this public key to your Fireblocks workspace.",
             responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
-    public ResponseEntity<CreateValidationKeyResponse> createValidationKey() {
+    public ResponseEntity<CreateValidationKeyResponse> createValidationKey(@Valid @RequestBody CreateValidationKeyRequest request) {
 
         CreateValidationKeyResponse response = new CreateValidationKeyResponse();
-        response.setPublicKeyPem(helperService.createValidationKey());
+        response.setPublicKeyPem(helperService.createValidationKey(request));
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

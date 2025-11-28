@@ -4,10 +4,10 @@
 package com.securosys.fireblocks.business.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.securosys.fireblocks.business.dto.response.KeyAttributesDto;
 import com.securosys.fireblocks.business.dto.response.LicenseResponseDto;
 import com.securosys.fireblocks.business.dto.response.RequestStatusResponseDto;
 import com.securosys.fireblocks.business.exceptions.BusinessException;
@@ -383,7 +383,7 @@ public class TsbService {
 
     }
 
-    public String getPublicKey(String label, String password){
+    public KeyAttributesDto getPublicKey(String label, String password){
         final ObjectMapper objectMapper = new ObjectMapper();
         final ObjectNode jsonBody = objectMapper.createObjectNode();
 
@@ -420,12 +420,32 @@ public class TsbService {
 
             if (responseData.has("errorCode")
                     && responseData.get("errorCode").asInt() == ERROR_KEY_NOT_EXISTENT) {
-                createOrUpdateKey(label, null, KEY_ALGORITHM, KEY_OID, 0);
+                throw new BusinessException("Key does not exist: " + statusCode + ": " + responseBody, BusinessReason.ERROR_INVALID_KEY_NAME);
             }
 
             JsonNode jsonData = responseData.get("json");
 
-            return jsonData.get("publicKey").asText();
+            KeyAttributesDto keyAttributes = new KeyAttributesDto();
+            keyAttributes.setPublicKey(jsonData.get("publicKey").asText());
+            keyAttributes.setAlgorithm(jsonData.get("algorithm").asText());
+
+            JsonNode keySizeNode = jsonData.get("keySize");
+            keyAttributes.setKeySize(keySizeNode != null && !keySizeNode.isNull() ? keySizeNode.asInt() : null);
+
+            JsonNode curveOidNode = jsonData.get("curveOid");
+            String curveOid = (curveOidNode != null && !curveOidNode.isNull())
+                    ? curveOidNode.asText()
+                    : null;
+
+            if ("ED".equalsIgnoreCase(keyAttributes.getAlgorithm()) && curveOid == null) {
+                JsonNode algorithmOidNode = jsonData.get("algorithmOid");
+                if (algorithmOidNode != null && !algorithmOidNode.isNull()) {
+                    curveOid = algorithmOidNode.asText();
+                }
+            }
+            keyAttributes.setCurveOid(curveOid);
+
+            return keyAttributes;
 
         } catch (Exception e) {
             throw new BusinessException("Failed to get key attributes.", BusinessReason.ERROR_GENERAL);
