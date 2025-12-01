@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 apply plugin: 'base'
-apply plugin: 'com.palantir.docker'
 
 configurations {
 	deployment
@@ -44,13 +43,6 @@ task prepareDockerContext(type: Copy) {
 
 def imageName = "${dockerImageName}:${project.version}";
 def artifactoryName = "${artifactoryUrl}/${artifactoryRealName}/";
-
-docker {
-    name "${artifactoryName}${imageName}"
-    dockerfile file("Dockerfile")
-    buildArgs(['PLATFORM': 'linux/amd64'])
-    copySpec.from(unpackBootJar.outputs).into("install")
-}
 
 task dockerBuildAmd64(type: Exec) {
     dependsOn prepareDockerContext
