@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -54,11 +53,6 @@ public class HsmFacade {
         requestStatusResponseDto = waitForApproval(requestStatusResponseDto, signatureId);
 
         return requestStatusResponseDto;
-    }
-
-    public String getPublicKeyString(){
-        PublicKey publicKey = getPublicKey();
-        return Base64.getEncoder().encodeToString(publicKey.getEncoded());
     }
 
     public boolean verify(byte[] payloadSignature, String serviceName, String payload) {

@@ -88,11 +88,8 @@ public class SigningService {
                 }
 
                 if (properties.isVerifySignatures()){
-                    String publicKeyPemValue = hsmFacade.getPublicKeyString();
-                    ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
                     ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
                     ((ObjectNode) payloadNode).put("serviceName", service);
-                    ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
                 }
 
                 String updatedRawPayload = objectMapper.writeValueAsString(payloadNode);
@@ -238,11 +235,8 @@ public class SigningService {
                 }
 
                 if (properties.isVerifySignatures()){
-                    String publicKeyPemValue = hsmFacade.getPublicKeyString();
-                    ((ObjectNode) payloadNode).put("publicKeyPem", publicKeyPemValue);
                     ((ObjectNode) payloadNode).put("rawPayload", rawPayload);
                     ((ObjectNode) payloadNode).put("serviceName", service);
-                    ((ObjectNode) payloadNode).put("expectedServiceName", properties.getServiceName());
                 }
 
                 String updatedRawPayload = objectMapper.writeValueAsString(payloadNode);

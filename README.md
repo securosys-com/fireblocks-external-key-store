@@ -37,6 +37,30 @@ java -jar fireblocks-application/build/libs/fireblocks-application-${VERSION}.ja
 The configuration options for the Securosys Custom Server are defined in the `application.yml`.
 For a full example, see the [template](etc/config_templates/config-files/template.yml).
 
+## Signatures verification process
+
+In order to verify the payload along with the payload signature, it is necessary to enter the path to the appropriate certificate from fireblocks in the configuration file.
+
+### Which certificate to use:
+
+The certificates are environment-specific (us-prod, eu-prod, etc), not customer-specific. All customers in the same Fireblocks environment share the same set of certificates.
+You can download the certificates by calling:
+
+```
+GET {MOBILE_GATEWAY_URL}/get_service_certificates
+```
+
+Example: <https://eu-mobile-api.fireblocks.io/get_service_certificates > (requires authentication with your access token).
+
+The response contains a certificate map with the following keys:
+
+- zs - Z-Service certificate (for JWT verification of the outer envelope)
+- vs - Vault Service certificate (this is what you need for verifying the payload signature)
+- ps - Policy Service certificate (for transaction metadata verification)
+- cm - Configuration Manager certificate (for proof of ownership messages)
+
+For payload verification, choose the vs (Vault Service) certificate.
+
 ## Running the tests
 
 To run the test suite, you need a connection to an HSM partition via the TSB.
