@@ -30,7 +30,12 @@ For a full installation and configuration guide, please see the
 # Build and run the executable JAR in separate steps
 ./gradlew bootJar
 java -jar fireblocks-application/build/libs/fireblocks-application-${VERSION}.jar
+
+# Build the Docker image
+./gradlew :fireblocks-application:jibDockerBuild
 ```
+
+Use the `fromDockerRegistry` and `toDockerRegistry` properties to override the base image and the target registry, for example by adding the `-PfromDockerRegistry=artifactory.company.com/example-docker-registry` and `-PtoDockerRegistry=artifactory.company.com/example-docker-registry` arguments.
 
 ## Configuration
 
