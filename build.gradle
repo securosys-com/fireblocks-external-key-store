@@ -5,11 +5,9 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.6' apply false
     id "io.freefair.lombok" version "9.0.0" apply false
-    id 'org.unbroken-dome.test-sets'		version '4.1.0'							apply false
-    id 'com.palantir.docker' version "0.36.0" apply false
+    id 'org.unbroken-dome.test-sets' version '4.1.0' apply false
     id 'org.flywaydb.flyway' version '11.14.0' apply false
 }
-
 
 gradle.beforeProject { Project project ->
     project.with {
@@ -50,11 +48,6 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
-}
-
-wrapper {
-    gradleVersion = '8.6'
-    distributionUrl = "https://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
 }
 
 allprojects {
