@@ -1,27 +1,20 @@
-# This file is a template, and might need editing before it works on your project.
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Gradle.gitlab-ci.yml
+image: eclipse-temurin:17-jdk-noble
 
-# This is the Gradle build system for JVM applications
-# https://gradle.org/
-# https://github.com/gradle/gradle
-
-image: gradle:alpine
-
-# Disable the Gradle daemon for Continuous Integration servers as correctness
-# is usually a priority over speed in CI environments. Using a fresh
-# runtime for each build is more reliable since the runtime is completely
-# isolated from any previous builds.
 variables:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  GIT_SUBMODULE_STRATEGY: none
+  GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
 
-before_script:
-  - GRADLE_USER_HOME="$(pwd)/.gradle"
-  - export GRADLE_USER_HOME
-  - export PATH=/usr/lib/jvm/temurin-17-jdk-amd64/bin:$PATH
+default:
+  cache:
+    # Cache wrapper as long as properties are the same
+    - paths:
+        - .gradle/wrapper
+      key:
+        files:
+          - gradle/wrapper/gradle-wrapper.properties
+    # Cache Gradle cache for the current commit only
+    - paths:
+        - .gradle/caches
+      key: ${CI_COMMIT_SHA}
 
 stages:
   - test
