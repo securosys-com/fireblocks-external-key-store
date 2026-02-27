@@ -47,10 +47,6 @@ spring:
     maximum-pool-size: ${spring.datasource.maximumPoolSize:10}
     pool-name: ${spring.datasource.poolName:HikariPool}
 
-  h2:
-    console:
-      enabled: true
-
 
 server:
   forward-headers-strategy: framework

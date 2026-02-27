@@ -35,7 +35,7 @@ import java.util.UUID;
 @OpenAPIDefinition(
         info = @Info(
                 title = "Fireblocks - Securosys Custom Server",
-                version = "1.0.0",
+                version = "1.0.1",
                 description = """
                         The Securosys Custom Server enables your Fireblocks workspace to use keys that
                         are securely stored in a Primus HSM.

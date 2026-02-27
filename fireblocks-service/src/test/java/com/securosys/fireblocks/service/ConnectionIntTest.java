@@ -96,8 +96,8 @@ class ConnectionIntTest extends IntTestBase {
             ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(keyRequest, HttpStatus.BAD_REQUEST);
 
             assertThat(response).isNotNull();
-            assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_OPERATION_FORBIDDEN.getReason());
-            assertThat(response.getMessage()).contains("Unauthorized to TSB");
+            assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_INVALID_API_KEY.getReason());
+            assertThat(response.getMessage()).contains("Invalid API Key");
 
             assertThat(response).isNotNull();
 
