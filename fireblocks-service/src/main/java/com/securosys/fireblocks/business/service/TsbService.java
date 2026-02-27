@@ -23,7 +23,6 @@ import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
@@ -34,6 +33,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -43,14 +43,18 @@ public class TsbService {
     private final TsbProperties tsbProperties;
     private final MtlsClientFactory mtlsClientFactory;
     private final AuthState authState;
+    private final CloseableHttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
     private static final String KEY_ALGORITHM = "EC";
     private static final String KEY_OID = "1.3.132.0.10";
     private static final int VALIDITY = 365;
 
-    private static final int ERROR_KEY_ALREADY_EXISTING = 608;
     private static final int ERROR_INVALID_API_KEY = 631;
-    private static final int ERROR_KEY_NOT_EXISTENT = 650;
+
+    private static final Map<String, BusinessReason> REASON_BY_NAME =
+            Arrays.stream(BusinessReason.values())
+                    .collect(Collectors.toMap(BusinessReason::getReason, r -> r));
 
     public void rollOverApiKey(String name) {
         switch (name) {
@@ -112,37 +116,75 @@ public class TsbService {
     }
 
     public Map<String, Object> doRequest(HttpUriRequest request, String apiKeyName) {
-        Map<String, Object> responseMap = new HashMap<>();
-
         String accessToken = tsbProperties.getTsbAccessToken();
         if (accessToken != null && !accessToken.isBlank()) {
-            request.addHeader("Authorization", "Bearer " + accessToken);
-        }
-
-        String apiKey = getApiKeyByName(apiKeyName);
-        if (!apiKey.isBlank()) {
-            request.addHeader("X-API-KEY", getApiKeyByName(apiKeyName));
+            request.setHeader("Authorization", "Bearer " + accessToken);
         }
 
         CloseableHttpClient client = isMtlsEnabled()
                 ? mtlsClientFactory.getClient()
-                : HttpClients.createDefault();
+                : httpClient;
 
-        try (CloseableHttpResponse response = client.execute(request)) {
-            int statusCode = response.getCode();
-            String responseBody = EntityUtils.toString(response.getEntity());
+        boolean retry;
 
-            if (!apiKey.isBlank() && statusCode == 401) { // HTTP_UNAUTHORIZED
-                final ObjectMapper objectMapper = new ObjectMapper();
-                final JsonNode jsonObject = objectMapper.readTree(responseBody);
-                if (jsonObject != null
-                        && jsonObject.has("errorCode")
-                        && jsonObject.get("errorCode").asInt() == ERROR_INVALID_API_KEY) {
-                    rollOverApiKey(apiKeyName);
-                    return doRequest(request, apiKeyName); // Retry with new API key
-                }
+        do {
+            retry = false;
+
+            String apiKey = getApiKeyByName(apiKeyName);
+            if (!apiKey.isBlank()) {
+                request.setHeader("X-API-KEY", apiKey);
+            } else {
+                request.removeHeaders("X-API-KEY");
             }
 
+            try (CloseableHttpResponse response = client.execute(request)) {
+
+                int statusCode = response.getCode();
+                String responseBody = response.getEntity() != null
+                        ? EntityUtils.toString(response.getEntity())
+                        : "";
+
+                if (!apiKey.isBlank() && statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
+
+                    JsonNode jsonObject = null;
+                    try {
+                        jsonObject = objectMapper.readTree(responseBody);
+                    } catch (Exception ignored) {}
+
+                    if (jsonObject != null
+                            && jsonObject.has("errorCode")
+                            && jsonObject.get("errorCode").asInt() == ERROR_INVALID_API_KEY
+                            && canGetNewApiKeyByName(apiKeyName)) {
+
+                        rollOverApiKey(apiKeyName);
+                        retry = true;
+                        continue;
+                    }
+                }
+
+                Map<String, Object> responseMap = new HashMap<>();
+                responseMap.put("statusCode", statusCode);
+                responseMap.put("body", responseBody);
+                return responseMap;
+
+            } catch (ParseException | IOException e) {
+                throw new BusinessException(
+                        "Error executing request",
+                        BusinessReason.ERROR_IN_SUBSYSTEM,
+                        e
+                );
+            }
+
+        } while (retry);
+
+        try (CloseableHttpResponse response = client.execute(request)) {
+
+            int statusCode = response.getCode();
+            String responseBody = response.getEntity() != null
+                    ? EntityUtils.toString(response.getEntity())
+                    : "";
+
+            Map<String, Object> responseMap = new HashMap<>();
             responseMap.put("statusCode", statusCode);
             responseMap.put("body", responseBody);
             return responseMap;
@@ -179,14 +221,11 @@ public class TsbService {
                 log.debug("Response Securosys TSB get request: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for get status request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK) {
-                throw new BusinessException("Failed to get request: " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
-            final ObjectMapper objectMapperResponse = new ObjectMapper();
-            final JsonNode responseData = objectMapperResponse.readTree(responseBody);
+            final JsonNode responseData = objectMapper.readTree(responseBody);
 
             RequestStatusResponseDto requestBody = new RequestStatusResponseDto();
             requestBody.setId(responseData.get("id").asText());
@@ -216,7 +255,6 @@ public class TsbService {
      * @param curveOid  the OID of the key
      */
     public void createOrUpdateKey(String label, String password, String keyType, String curveOid, int keySize) {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final ObjectNode jsonBody = objectMapper.createObjectNode();
         jsonBody.put("label", label);
         jsonBody.put("algorithm", keyType);
@@ -238,19 +276,6 @@ public class TsbService {
         final ObjectNode attributesNode = objectMapper.convertValue(attributes, ObjectNode.class);
         jsonBody.set("attributes", attributesNode);
 
-//        Policy basicPolicy;
-//        basicPolicy = new Policy();
-//        KeyStatus keyStatus = new KeyStatus();
-//        keyStatus.setBlocked(false);
-//        basicPolicy.setRuleUse(null);
-//        basicPolicy.setRuleBlock(null);
-//        basicPolicy.setRuleUnblock(null);
-//        basicPolicy.setRuleModify(null);
-//        basicPolicy.setKeyStatus(keyStatus);
-//        ObjectNode policyNode = objectMapper.convertValue(basicPolicy, ObjectNode.class);
-//        jsonBody.set("policy", policyNode);
-
-
         if (log.isDebugEnabled()) {
             log.debug("Request Securosys TSB createKey: {}", jsonBody);
         }
@@ -263,20 +288,13 @@ public class TsbService {
             final Map<String, Object> responseMap = doRequest(request, Constants.KEY_MANAGEMENT_TOKEN_NAME);
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
-            JsonNode responseData = objectMapper.readTree(responseBody);
 
             if (log.isDebugEnabled()) {
                 log.debug("Response Securosys TSB createKey: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for create key request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (responseData.has("errorCode")
-                    && responseData.get("errorCode").asInt() == ERROR_KEY_ALREADY_EXISTING) {
-                throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-            }
-            else if (statusCode != HttpURLConnection.HTTP_CREATED) {
-                throw new BusinessException("Failed to create key: " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
         }catch (IOException e){
@@ -316,7 +334,6 @@ public class TsbService {
      * For more information, @see <a href="https://docs.securosys.com/tsb/overview">
      */
     public String sign(String label, String password, String payload, String payloadType, String signatureType, String signatureAlgorithm, String metaData, String metaDataSignature) {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final Map<String, Object> signRequest = new HashMap<>();
 
         signRequest.put("payload", payload);
@@ -365,14 +382,8 @@ public class TsbService {
                 log.debug("Response Securosys TSB sign: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for signing request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                if (responseData.has("errorCode")
-                        && responseData.get("errorCode").asInt() == ERROR_KEY_ALREADY_EXISTING) {
-                    throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-                }
-                throw new BusinessException("Failed to sign in TSB: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
             return responseData.get("signRequestId").asText();
@@ -384,7 +395,6 @@ public class TsbService {
     }
 
     public KeyAttributesDto getPublicKey(String label, String password){
-        final ObjectMapper objectMapper = new ObjectMapper();
         final ObjectNode jsonBody = objectMapper.createObjectNode();
 
         jsonBody.put("label", label);
@@ -410,19 +420,11 @@ public class TsbService {
                 log.debug("Response Securosys TSB get key attributes: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for get key attributes request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                throw new BusinessException("Failed to get key attributes: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
             JsonNode responseData = objectMapper.readTree(responseBody);
-
-            if (responseData.has("errorCode")
-                    && responseData.get("errorCode").asInt() == ERROR_KEY_NOT_EXISTENT) {
-                throw new BusinessException("Key does not exist: " + statusCode + ": " + responseBody, BusinessReason.ERROR_INVALID_KEY_NAME);
-            }
-
             JsonNode jsonData = responseData.get("json");
 
             KeyAttributesDto keyAttributes = new KeyAttributesDto();
@@ -472,13 +474,10 @@ public class TsbService {
                 log.debug("Response Securosys TSB get license: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for license request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK) {
-                throw new BusinessException("Failed to get license: " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
-            ObjectMapper objectMapper = new ObjectMapper();
             LicenseResponseDto licenseResponseDto = objectMapper.readValue(responseBody, LicenseResponseDto.class);
 
             if (log.isDebugEnabled()) {
@@ -501,7 +500,6 @@ public class TsbService {
      * For more information, @see <a href="https://docs.securosys.com/tsb/overview">
      */
     public void syncSelfSign(String signKeyName, String password, String signatureAlgorithm) {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);
@@ -534,20 +532,12 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            JsonNode responseData = objectMapper.readTree(responseBody);
-
             if (log.isDebugEnabled()) {
                 log.debug("Response Securosys TSB self-sign: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for self-sign certificate request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                if (responseData.has("errorCode")
-                        && responseData.get("errorCode").asInt() == ERROR_KEY_ALREADY_EXISTING) {
-                    throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-                }
-                throw new BusinessException("Failed to self-sign in TSB: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
         } catch (Exception e) {
@@ -556,7 +546,6 @@ public class TsbService {
     }
 
     public String generateCertificateRequest(String signKeyName, String password, String signatureAlgorithm) {
-        final ObjectMapper objectMapper = new ObjectMapper();
 
         // csrSignRequest
         final Map<String, Object> csrSignRequest = new HashMap<>();
@@ -599,14 +588,8 @@ public class TsbService {
                 log.debug("Response Securosys TSB certificate request: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for certificate request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                if (responseData.has("errorCode")
-                            && responseData.get("errorCode").asInt() == ERROR_KEY_ALREADY_EXISTING) {
-                    throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-                }
-                throw new BusinessException("Failed to request certificate in TSB: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
             return responseData.get("signRequestId").asText();
@@ -617,7 +600,6 @@ public class TsbService {
     }
 
     public String generateSynchronousCertificateRequest(String signKeyName, String password, String signatureAlgorithm) {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);
@@ -656,13 +638,8 @@ public class TsbService {
                 log.debug("Response Securosys TSB synchronous certificate request: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for synchronous certificate request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                if (responseData.path("reason").asText().equals("res.error.key.already.existing")) {
-                    throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-                }
-                throw new BusinessException("Failed to request synchronous certificate in TSB: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
             return responseData.get("certificateSigningRequest").asText();
@@ -674,7 +651,6 @@ public class TsbService {
 
 
     public String signCertificate(String signKeyName, String password, String signatureAlgorithm, String certificateSigningRequest) {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);
@@ -716,13 +692,8 @@ public class TsbService {
                 log.debug("Response Securosys TSB certificate sign: {}", responseBody);
             }
 
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for certificate sign request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
-                if (responseData.path("reason").asText().equals("res.error.key.already.existing")) {
-                    throw new BusinessException("Key already exist: " + responseBody, BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING);
-                }
-                throw new BusinessException("Failed to sign certificate in TSB: " + statusCode + ": " + responseBody, BusinessReason.ERROR_GENERAL);
+            if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
+                handleErrorResponse(statusCode, responseBody);
             }
 
             if (responseData.has("certificate")) {
@@ -743,8 +714,6 @@ public class TsbService {
      */
     public void deleteKey(String keyName) {
 
-        final ObjectMapper objectMapper = new ObjectMapper();
-
         final HttpDelete request = new HttpDelete(tsbProperties.getTsbRestApi() + "/v1/key/" + keyName);
         request.addHeader("Accept", "*/*");
 
@@ -753,25 +722,78 @@ public class TsbService {
         final int statusCode = (int) responseMap.get("statusCode");
         final String responseBody = (String) responseMap.get("body");
 
-        try {
-            JsonNode responseData = objectMapper.readTree(responseBody);
-
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB delete key: {}", responseBody);
-            }
-
-            if (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new BusinessException("Unauthorized to TSB for delete key request", BusinessReason.ERROR_OPERATION_FORBIDDEN);
-            } else if (statusCode != HttpURLConnection.HTTP_OK) {
-                if (responseData.path("reason").asText().equals("res.error.key.not.existent")) {
-                    log.info("Key does not exist");
-                    return;
-                }
-                throw new BusinessException("Failed to delete key " + responseBody, BusinessReason.ERROR_GENERAL);
-            }
-        } catch (JsonProcessingException e) {
-            throw new BusinessException("Failed to delete key in TSB: " + e.getMessage(), BusinessReason.ERROR_GENERAL);
+        if (log.isDebugEnabled()) {
+            log.debug("Response Securosys TSB delete key: {}", responseBody);
+        }
+        if (statusCode != HttpURLConnection.HTTP_OK) {
+            handleErrorResponse(statusCode, responseBody);
         }
 
+    }
+
+    private void handleErrorResponse(int statusCode, String responseBody) {
+
+        JsonNode node = null;
+
+        try {
+            if (responseBody != null && !responseBody.isBlank()) {
+                node = objectMapper.readTree(responseBody);
+            }
+        } catch (Exception ignored) {
+            log.warn("Failed to parse TSB error response body");
+        }
+
+        String tsbMessage = node != null && node.has("message")
+                ? node.get("message").asText()
+                : "TSB returned HTTP " + statusCode;
+
+        String tsbReason = node != null && node.has("reason")
+                ? node.get("reason").asText()
+                : null;
+
+        BusinessReason reason = REASON_BY_NAME.get(tsbReason);
+        if (reason != null) {
+            throw new BusinessException(tsbMessage, reason);
+        }
+
+        switch (statusCode) {
+
+            case 400:
+                throw new BusinessException(
+                        tsbMessage,
+                        BusinessReason.ERROR_INPUT_VALIDATION_FAILED
+                );
+
+            case 401:
+                throw new BusinessException(
+                        tsbMessage,
+                        BusinessReason.ERROR_INVALID_ACCESS_TOKEN
+                );
+
+            case 403:
+                throw new BusinessException(
+                        tsbMessage,
+                        BusinessReason.ERROR_OPERATION_FORBIDDEN_FOR_KEY
+                );
+
+            case 404:
+                throw new BusinessException(
+                        tsbMessage,
+                        BusinessReason.ERROR_RESOURCE_NOT_FOUND
+                );
+
+            default:
+                if (statusCode >= 500) {
+                    throw new BusinessException(
+                            tsbMessage,
+                            BusinessReason.ERROR_IN_SUBSYSTEM
+                    );
+                }
+
+                throw new BusinessException(
+                        tsbMessage,
+                        BusinessReason.ERROR_GENERAL
+                );
+        }
     }
 }

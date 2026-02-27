@@ -78,8 +78,8 @@ class HelpersControllerIntTest extends IntTestBase {
         ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidCreateValidationKeyRequest(request,HttpStatus.BAD_REQUEST);
 
         assertThat(response).isNotNull();
-        assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_DATA_OBJECT_ALREADY_EXISTING.getReason());
-        assertThat(response.getMessage()).contains("Key already exist");
+        assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_KEY_ALREADY_EXISTING.getReason());
+        assertThat(response.getMessage()).contains("Could not create key. The key name is already in use");
     }
 
     @Test
@@ -161,7 +161,7 @@ class HelpersControllerIntTest extends IntTestBase {
 
         assertThat(response).isNotNull();
         assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_GENERAL.getReason());
-        assertThat(response.getMessage()).contains("res.error.key.not.existent");
+        assertThat(response.getMessage()).contains("A key with the name 'FireblocksInvalidKey' does not exist");
     }
 
     @Test
@@ -175,11 +175,11 @@ class HelpersControllerIntTest extends IntTestBase {
                 .sdkApiKey(SDK_API_KEY)
                 .build();
 
-        ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidProofOfOwnershipRequest(request, HttpStatus.NOT_IMPLEMENTED);
+        ReasonBasedExceptionDto response = TestBusinessApp.sendInvalidProofOfOwnershipRequest(request, HttpStatus.NOT_FOUND);
 
         assertThat(response).isNotNull();
-        assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_GENERAL.getReason());
-        assertThat(response.getMessage()).contains("res.error.key.not.existent");
+        assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_KEY_NOT_EXISTENT.getReason());
+        assertThat(response.getMessage()).contains("A key with the name 'FireblocksInvalidKey' does not exist");
     }
 
     @Test
@@ -199,7 +199,7 @@ class HelpersControllerIntTest extends IntTestBase {
 
         assertThat(response).isNotNull();
         assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_GENERAL.getReason());
-        assertThat(response.getMessage()).contains("res.error.key.not.existent");
+        assertThat(response.getMessage()).contains("A key with the name 'FireblocksInvalidKey' does not exist");
     }
 
     @Test

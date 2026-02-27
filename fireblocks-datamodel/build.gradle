@@ -10,7 +10,7 @@ dependencies {
 	implementation 'commons-codec:commons-codec'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-mysql'
-    implementation group: 'org.flywaydb', name: 'flyway-database-postgresql'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 	runtimeOnly 'com.h2database:h2'
