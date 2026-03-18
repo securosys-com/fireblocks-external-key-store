@@ -14,7 +14,6 @@ import com.securosys.fireblocks.business.dto.response.ValidationProofOfOwnership
 import com.securosys.fireblocks.business.service.HelperService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,12 +24,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 
 @RestController
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Tag(name = "Helper Functions", description = "Helper functions for validation keys and asset keys (signing keys).")
-@SecurityRequirement(name = "api_key")
 @Slf4j
 @ConditionalOnProperty(
         value = "tsb.airGapped",
@@ -46,7 +45,8 @@ public class HelpersController extends BaseController{
             description = "Creates key that can be used as the validation key."
                 + " The key label is the fixed value \"FIREBLOCKS_VALIDATION_KEY\"."
                 + " Returns the public key in PEM format. Onboard this public key to your Fireblocks workspace.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
+            security = {})
     public ResponseEntity<CreateValidationKeyResponse> createValidationKey(@Valid @RequestBody CreateValidationKeyRequest request) {
 
         CreateValidationKeyResponse response = new CreateValidationKeyResponse();
@@ -59,7 +59,8 @@ public class HelpersController extends BaseController{
             description = "Creates a validation certificate. The certificate is signed by the validation key."
                 + " The public key that is certified is the provided asset key (in Fireblocks' terms: signing key)."
                 + " Prerequisite: the validation key with label \"FIREBLOCKS_VALIDATION_KEY\" must exist.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
+            security = {})
     public ResponseEntity<CreateValidationResponse> createValidations(@Valid @RequestBody CreateValidationsRequest request) {
 
         String csr = helperService.generateCsr(request);
@@ -73,7 +74,8 @@ public class HelpersController extends BaseController{
     @Operation(
             summary = "Create a Proof of Ownership",
             description = "Generates a signed Proof of Ownership message, thus confirming control over the private asset key (in Fireblocks' terms: signing key).",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) }
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
+            security = {}
     )
     public ResponseEntity<ProofOfOwnershipResponse> proofOfOwnership(@Valid @RequestBody ProofOfOwnershipRequest request){
 
@@ -85,11 +87,23 @@ public class HelpersController extends BaseController{
     @Operation(
             summary = "Create validation and Proof of Ownership in one go",
             description = "Creates a validation certificate and a signed Proof of Ownership in a single request. See also the separate endpoints.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) }
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
+            security = {}
     )
     public ResponseEntity<ValidationProofOfOwnershipResponse> validationAndProofOfOwnership(@Valid @RequestBody ValidationProofOfOwnershipRequest request){
 
         ValidationProofOfOwnershipResponse response = helperService.generateValidationProofOfOwnership(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping(value = "/hsmConnectionCheck", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Check TSB and HSM connectivity",
+            description = "Calls the TSB /v1/licenseInfo endpoint to verify connectivity and returns license flags.",
+            responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) },
+            security = {}
+    )
+    public ResponseEntity<Set<String>> checkConnection() {
+        return new ResponseEntity<>(helperService.isLicensed(), HttpStatus.OK);
     }
 }

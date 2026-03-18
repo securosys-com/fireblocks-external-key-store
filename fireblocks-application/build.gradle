@@ -14,11 +14,13 @@ dependencies {
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 }
 
-tasks.assemble.doLast {
-	println 'Copying resources'
-	copy {
-		from "${project(':fireblocks-service').buildDir}/resources/main/"
-		into "build/resources/main"
-		include 'logback.xml'
+tasks.named('assemble').configure {
+	doLast {
+		println 'Copying resources...'
+		copy {
+			from project(':fireblocks-service').layout.buildDirectory.dir('resources/main').get()
+			into layout.buildDirectory.dir('resources/main').get()
+			include 'logback.xml'
+		}
 	}
 }

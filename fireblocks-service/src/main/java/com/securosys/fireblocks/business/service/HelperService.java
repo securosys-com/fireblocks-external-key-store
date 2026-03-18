@@ -8,11 +8,13 @@ import com.securosys.fireblocks.business.dto.request.CreateValidationsRequest;
 import com.securosys.fireblocks.business.dto.request.ProofOfOwnershipRequest;
 import com.securosys.fireblocks.business.dto.request.ValidationProofOfOwnershipRequest;
 import com.securosys.fireblocks.business.dto.response.KeyAttributesDto;
+import com.securosys.fireblocks.business.dto.response.LicenseResponseDto;
 import com.securosys.fireblocks.business.dto.response.ProofOfOwnershipResponse;
 import com.securosys.fireblocks.business.dto.response.ValidationProofOfOwnershipResponse;
 import com.securosys.fireblocks.business.exceptions.BusinessException;
 import com.securosys.fireblocks.business.exceptions.BusinessReason;
 import com.securosys.fireblocks.business.facade.HsmFacade;
+import com.securosys.fireblocks.configuration.TsbProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,10 +22,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -32,6 +31,7 @@ public class HelperService {
 
     private final HsmFacade hsmFacade;
     private final TsbService tsbService;
+    private final TsbProperties tsbProperties;
     private final String KEY_LABEL = "FIREBLOCKS_VALIDATION_KEY";
 
     public String createValidationKey(CreateValidationKeyRequest request) {
@@ -241,4 +241,17 @@ public class HelperService {
         }
     }
 
+    public Set<String> isLicensed(){
+
+        if (tsbProperties.isAirGapped()){
+            throw new BusinessException("Air gapped mode is enabled, connection to hsm is unavailable ",
+                    BusinessReason.ERROR_OPERATION_UNREACHABLE);
+        }
+        LicenseResponseDto license = tsbService.getLicense();
+        if (license.getClientFlags() == null){
+            throw new BusinessException("License flags are empty.",
+                    BusinessReason.ERROR_IN_HSM);
+        }
+        return license.getClientFlags();
+    }
 }
