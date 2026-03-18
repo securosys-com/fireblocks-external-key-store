@@ -2,6 +2,7 @@ image: eclipse-temurin:17-jdk-noble
 
 variables:
   GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
+  INTERNAL_PREFIX: ""
 
 default:
   cache:
@@ -29,8 +30,6 @@ build_job:
     - Java
     - Docker
     - SpringBoot
-  before_script:
-    - export INTERNAL_PREFIX=
   script:
     - ./gradlew dockerBuildArm64
     - ./gradlew dockerBuildAmd64
