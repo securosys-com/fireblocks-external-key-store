@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TestBusinessApp {
 
@@ -52,6 +53,19 @@ public class TestBusinessApp {
                 .contentType(ContentType.JSON)
                 .log().all()
                 .get("/versionInfo")
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.OK.value())
+                .extract()
+                .as(new TypeRef<>() {
+                });
+    }
+
+    public static Set<String> sendGetHealthCheckRequest() {
+        return RestAssured.given()
+                .contentType(ContentType.JSON)
+                .log().all()
+                .get("/hsmConnectionCheck")
                 .then()
                 .log().all()
                 .statusCode(HttpStatus.OK.value())

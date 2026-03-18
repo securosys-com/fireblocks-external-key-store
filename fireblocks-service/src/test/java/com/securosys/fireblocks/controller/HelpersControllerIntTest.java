@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -319,6 +320,13 @@ class HelpersControllerIntTest extends IntTestBase {
         assertThat(response).isNotNull();
         assertThat(response.getReason()).isEqualTo(BusinessReason.ERROR_INVALID_ALGORITHM.getReason());
         assertThat(response.getMessage()).contains("Unsupported key algorithm");
+    }
+
+    @Test
+    @DisplayName("2.5.1.17 Execute health check (license) → should succeed")
+    void executeHealthCheck_shouldSucceed() {
+        Set<String> response = TestBusinessApp.sendGetHealthCheckRequest();
+        assertThat(response).isNotNull();
     }
 
 }

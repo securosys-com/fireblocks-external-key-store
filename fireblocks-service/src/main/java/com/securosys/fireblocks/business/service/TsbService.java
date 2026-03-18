@@ -482,7 +482,7 @@ public class TsbService {
 
             if (log.isDebugEnabled()) {
                 log.debug("Status code get license is: {}", statusCode);
-                log.debug("Response JSON: {}", licenseResponseDto);
+                log.debug("Response licence info JSON: {}", licenseResponseDto);
             }
             return licenseResponseDto;
         } catch (IOException e) {

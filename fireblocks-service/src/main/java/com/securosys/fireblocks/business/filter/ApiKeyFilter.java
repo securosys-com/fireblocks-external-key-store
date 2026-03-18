@@ -21,11 +21,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyFilter.class);
+    private static final Set<String> PROTECTED_ENDPOINTS = Set.of(
+            "/v1/messagesToSign",
+            "/v1/messagesStatus",
+            "/v1/signAllPendingMessages"
+    );
 
     @SuppressWarnings("unused")
     private final CustomServerProperties properties;
@@ -50,7 +56,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if (uri.contains("/swagger-ui") || uri.contains("/v3/api-docs") || "/".equals(uri)) {
+        if (!requiresApiKey(uri)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -81,5 +87,26 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean requiresApiKey(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        String normalizedUri = uri.endsWith("/") && uri.length() > 1
+                ? uri.substring(0, uri.length() - 1)
+                : uri;
+        if (normalizedUri.contains("/swagger-ui") || normalizedUri.contains("/v3/api-docs") || "/".equals(normalizedUri)) {
+            return false;
+        }
+        if (normalizedUri.contains("/v1/signRequest/") || normalizedUri.endsWith("/v1/signRequest")) {
+            return true;
+        }
+        for (String endpoint : PROTECTED_ENDPOINTS) {
+            if (normalizedUri.equals(endpoint) || normalizedUri.endsWith(endpoint)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -19,6 +19,8 @@ default:
 stages:
   - test
   - build
+  - vulnerability_scan
+  - push2jfrog
   - mirror
 
 build_job:
@@ -50,63 +52,77 @@ test_job:
     expire_in: 7 days
 
 
-#vulnerability_scan:
-#  stage: vulnerability_scan
-#  tags:
-#    - Linux
-#    - Debian11
-#    - PortalApi
-#  before_script:
-#    - export VERSION=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
-#    - export DOCKER_IMAGE_FULL_URL=${JFROG_ARTIFACTORY_URL}/${INTERNAL_PREFIX}${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:$VERSION
-#  script:
-#    - ./gradlew clean build -x test dockerBuildAmd64
-#    - echo $DOCKER_HUB_PAT | docker login --username cloudsadmin --password-stdin
-#    - |
-#      docker scout cves \
-#        --format markdown \
-#        --only-severity critical \
-#        --only-severity high \
-#        $DOCKER_IMAGE_FULL_URL \
-#        > vulnerability_scan.txt || true
-#    - |
-#      docker scout recommendations \
-#        --format markdown \
-#        $DOCKER_IMAGE_FULL_URL \
-#        > vulnerability_scan_recommendations.txt || true
-#    - docker scout cache prune -f
-#    - docker logout
-#  artifacts:
-#    when: always
-#    name: "vulnerability_scan_securosys-ska.txt"
-#    paths:
-#      - "vulnerability_scan.txt"
-#      - "vulnerability_scan_recommendations.txt"
-#    expire_in: 1 day
+vulnerability_scan:
+  stage: vulnerability_scan
+  tags:
+    - Java
+    - SpringBoot
+    - Docker
+  before_script:
+    - export VERSION=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
+    - export DOCKER_IMAGE_FULL_URL=${JFROG_ARTIFACTORY_URL}/${INTERNAL_PREFIX}${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:$VERSION
+  script:
+    - ./gradlew clean build -x test dockerBuildAmd64
+    - echo $DOCKER_HUB_PAT | docker login --username cloudsadmin --password-stdin
+    - |
+      docker scout cves \
+        --format markdown \
+        --only-severity critical \
+        --only-severity high \
+        $DOCKER_IMAGE_FULL_URL \
+        > vulnerability_scan.txt || true
+    - |
+      docker scout recommendations \
+        --format markdown \
+        $DOCKER_IMAGE_FULL_URL \
+        > vulnerability_scan_recommendations.txt || true
+    - docker scout cache prune -f
+    - docker logout
+  artifacts:
+    when: always
+    name: "vulnerability_scan_securosys-ska.txt"
+    paths:
+      - "vulnerability_scan.txt"
+      - "vulnerability_scan_recommendations.txt"
+    expire_in: 1 day
 
-#docker_tag_image_job:
-#  stage: push2jfrog
-#  tags:
-#    - Linux
-#    - Debian11
-#    - PortalApi
-#  before_script:
-#    - export INTERNAL_PREFIX=internal-
-#    - export PROP_PREFIX=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
-#  script:
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh securosys-docker-repository-login
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker v
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file v
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip v
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository v
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker l
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file l
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip l
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository l
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-amd64-docker-image-to-repository
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh push-arm64-docker-image-to-repository
-#    - bash fireblocks-deploy/securosys-repository/deploy_script.sh securosys-docker-repository-logout
-#    - echo "Release Version Tag:" $PROP_PREFIX
+push2jfrog:
+  stage: push2jfrog
+  tags:
+    - Java
+    - Docker
+    - SpringBoot
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  before_script:
+    - export VERSION=`cat gradle.properties | grep "VERSION" | cut -d'=' -f2`
+    - docker buildx create --use --name multiplatform || docker buildx use multiplatform
+    - docker buildx inspect --bootstrap
+    - docker run --privileged --rm tonistiigi/binfmt --install all
+    - bash fireblocks-deploy/securosys-repository/deploy_script.sh securosys-docker-repository-login
+  script:
+    - |
+      set -euo pipefail
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker v
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file v
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip v
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository v
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-downloadlink-file-docker l
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-configuration-zip-file l
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh create-zip l
+      bash fireblocks-deploy/securosys-repository/deploy_script.sh push-zip-to-repository l
+    - | ## DOCEKR IMAGE BUILD (ARM64, AMD64)
+      echo "${JFROG_ROBOT_WRITER_PASS}" | docker login ${JFROG_ARTIFACTORY_URL} \
+        --username ${JFROG_ROBOT_WRITER_ACCOUNT} \
+        --password-stdin
+      ./gradlew prepareDockerContext
+      cd "fireblocks-docker/build/docker/"
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        -t ${JFROG_ARTIFACTORY_URL}/${INTERNAL_PREFIX}${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:${VERSION} \
+        -t ${JFROG_ARTIFACTORY_URL}/${INTERNAL_PREFIX}${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:latest \
+        --push \
+        .
 
 mirror:
   stage: mirror

@@ -31,8 +31,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(
+                                "/v1/messagesToSign",
+                                "/v1/messagesStatus",
+                                "/v1/signAllPendingMessages",
+                                "/v1/signRequest/**"
+                        ).authenticated()
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(e -> e
