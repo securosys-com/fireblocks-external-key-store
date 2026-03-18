@@ -7,7 +7,6 @@ package com.securosys.fireblocks.business.controller;
 import com.securosys.fireblocks.business.service.InfoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import java.util.Map;
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Tag(name = "Service Information")
-@SecurityRequirement(name = "api_key")
 @Slf4j
 public class ServiceController extends BaseController{
 

@@ -45,8 +45,7 @@ public class HelpersController extends BaseController{
             description = "Creates key that can be used as the validation key."
                 + " The key label is the fixed value \"FIREBLOCKS_VALIDATION_KEY\"."
                 + " Returns the public key in PEM format. Onboard this public key to your Fireblocks workspace.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
-            security = {})
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<CreateValidationKeyResponse> createValidationKey(@Valid @RequestBody CreateValidationKeyRequest request) {
 
         CreateValidationKeyResponse response = new CreateValidationKeyResponse();
@@ -59,8 +58,7 @@ public class HelpersController extends BaseController{
             description = "Creates a validation certificate. The certificate is signed by the validation key."
                 + " The public key that is certified is the provided asset key (in Fireblocks' terms: signing key)."
                 + " Prerequisite: the validation key with label \"FIREBLOCKS_VALIDATION_KEY\" must exist.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
-            security = {})
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<CreateValidationResponse> createValidations(@Valid @RequestBody CreateValidationsRequest request) {
 
         String csr = helperService.generateCsr(request);
@@ -74,9 +72,7 @@ public class HelpersController extends BaseController{
     @Operation(
             summary = "Create a Proof of Ownership",
             description = "Generates a signed Proof of Ownership message, thus confirming control over the private asset key (in Fireblocks' terms: signing key).",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
-            security = {}
-    )
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<ProofOfOwnershipResponse> proofOfOwnership(@Valid @RequestBody ProofOfOwnershipRequest request){
 
         ProofOfOwnershipResponse response = helperService.generateProofOfOwnership(request);
@@ -87,9 +83,7 @@ public class HelpersController extends BaseController{
     @Operation(
             summary = "Create validation and Proof of Ownership in one go",
             description = "Creates a validation certificate and a signed Proof of Ownership in a single request. See also the separate endpoints.",
-            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) },
-            security = {}
-    )
+            responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<ValidationProofOfOwnershipResponse> validationAndProofOfOwnership(@Valid @RequestBody ValidationProofOfOwnershipRequest request){
 
         ValidationProofOfOwnershipResponse response = helperService.generateValidationProofOfOwnership(request);
@@ -100,9 +94,7 @@ public class HelpersController extends BaseController{
     @Operation(
             summary = "Check TSB and HSM connectivity",
             description = "Calls the TSB /v1/licenseInfo endpoint to verify connectivity and returns license flags.",
-            responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) },
-            security = {}
-    )
+            responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<Set<String>> checkConnection() {
         return new ResponseEntity<>(helperService.isLicensed(), HttpStatus.OK);
     }

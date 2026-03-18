@@ -27,12 +27,10 @@ import java.util.Set;
 public class ApiKeyFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyFilter.class);
-    private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
-            "/v1/createValidationKey",
-            "/v1/createValidations",
-            "/v1/proofOfOwnership",
-            "/v1/validationAndProofOfOwnership",
-            "/v1/hsmConnectionCheck"
+    private static final Set<String> PROTECTED_ENDPOINTS = Set.of(
+            "/v1/messagesToSign",
+            "/v1/messagesStatus",
+            "/v1/signAllPendingMessages"
     );
 
     @SuppressWarnings("unused")
@@ -58,7 +56,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if (isPublicEndpoint(uri)) {
+        if (!requiresApiKey(uri)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -91,7 +89,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private static boolean isPublicEndpoint(String uri) {
+    private static boolean requiresApiKey(String uri) {
         if (uri == null) {
             return false;
         }
@@ -99,9 +97,12 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                 ? uri.substring(0, uri.length() - 1)
                 : uri;
         if (normalizedUri.contains("/swagger-ui") || normalizedUri.contains("/v3/api-docs") || "/".equals(normalizedUri)) {
+            return false;
+        }
+        if (normalizedUri.contains("/v1/signRequest/") || normalizedUri.endsWith("/v1/signRequest")) {
             return true;
         }
-        for (String endpoint : PUBLIC_ENDPOINTS) {
+        for (String endpoint : PROTECTED_ENDPOINTS) {
             if (normalizedUri.equals(endpoint) || normalizedUri.endsWith(endpoint)) {
                 return true;
             }
