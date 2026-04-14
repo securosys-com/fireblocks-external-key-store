@@ -32,6 +32,20 @@ For a full installation and configuration guide, please see the
 java -jar fireblocks-application/build/libs/fireblocks-application-${VERSION}.jar
 ```
 
+The Docker images are built using [Jib](https://github.com/GoogleContainerTools/jib).
+To build the image against the local Docker daemon:
+
+```sh
+# Build the image towards the local Docker daemon
+./gradlew jibDockerBuild
+
+# List the image
+docker images
+
+# Run the locally built image
+docker run --rm -p 8080:8080 securosys.jfrog.io/internal-fireblocks/fireblocks-external-key-store:latest
+```
+
 ## Configuration
 
 The configuration options for the Securosys Custom Server are defined in the `application.yml`.
