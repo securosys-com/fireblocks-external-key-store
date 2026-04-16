@@ -30,7 +30,7 @@ tasks.named('assemble').configure {
 
 // Docker image build
 
-def internalPrefix = System.getenv("INTERNAL_PREFIX") ?: "internal-" // defensive: default to internal
+def internalPrefix = System.getenv("INTERNAL_PREFIX") ?: ""
 def repositoryName = internalPrefix + 'fireblocks'
 
 jib {
