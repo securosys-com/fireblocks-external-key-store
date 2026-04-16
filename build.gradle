@@ -1,5 +1,11 @@
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
+buildscript {
+	dependencies {
+		classpath 'com.google.cloud.tools:jib-spring-boot-extension-gradle:0.1.0'
+	}
+}
+
 plugins {
     id 'base'
     id 'java'
@@ -7,12 +13,7 @@ plugins {
     id "io.freefair.lombok" version "9.0.0" apply false
     id 'org.unbroken-dome.test-sets' version '4.1.0' apply false
     id 'org.flywaydb.flyway' version '11.14.0' apply false
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+	id 'com.google.cloud.tools.jib' version '3.5.2' apply false
 }
 
 allprojects {
@@ -115,7 +116,6 @@ subprojects {
                 systemProperty "jdk.sunec.disableNative", "false"
                 environment "jdk.sunec.disableNative", "false"
                 environment "SPRING_PROFILES_ACTIVE", activeProfile
-                jvmArgs '--add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED', '--add-opens=java.base/sun.security.x509=ALL-UNNAMED', '--add-opens=java.base/sun.security.pkcs=ALL-UNNAMED', '--add-opens=java.base/sun.security.util=ALL-UNNAMED'
                 println "Running ${project} tests with profile: ${activeProfile}"
             }
             //finalizedBy rootProject.tasks.named('aggregateTestReports')

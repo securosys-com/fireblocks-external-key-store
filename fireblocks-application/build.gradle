@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: Copyright 2025 Securosys SA
 // SPDX-License-Identifier: Apache-2.0
 
-apply plugin: 'java'
-apply plugin: 'org.springframework.boot'
+plugins {
+	id 'java'
+	id 'org.springframework.boot'
+	id 'com.google.cloud.tools.jib'
+}
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
@@ -21,6 +24,67 @@ tasks.named('assemble').configure {
 			from project(':fireblocks-service').layout.buildDirectory.dir('resources/main').get()
 			into layout.buildDirectory.dir('resources/main').get()
 			include 'logback.xml'
+		}
+	}
+}
+
+// Docker image build
+
+def internalPrefix = System.getenv("INTERNAL_PREFIX") ?: "internal-" // defensive: default to internal
+def repositoryName = internalPrefix + 'fireblocks'
+
+jib {
+	from {
+		image = 'eclipse-temurin:21-jre-ubi9-minimal'
+		platforms {
+			platform {
+				architecture = 'amd64'
+				os = 'linux'
+			}
+			platform {
+				architecture = 'arm64'
+				os = 'linux'
+			}
+		}
+	}
+	to {
+		image = 'securosys.jfrog.io/' + repositoryName + '/fireblocks-external-key-store'
+		tags = ['latest', project.version]
+	}
+	container {
+		creationTime = 'USE_CURRENT_TIMESTAMP'
+		mainClass = 'com.securosys.fireblocks.FireblocksApplication'
+		ports = ['8080']
+		// https://specs.opencontainers.org/image-spec/annotations/
+		labels = [
+			'org.opencontainers.image.vendor': 'Securosys SA',
+			'org.opencontainers.image.version': project.version,
+			'org.opencontainers.image.title': 'Securosys Custom Server for Fireblocks',
+			'org.opencontainers.image.description': 'A Custom Server for connecting Fireblocks Key Link with Securosys Primus HSM',
+			'org.opencontainers.image.documentation': 'https://docs.securosys.com/fireblocks/overview/',
+			'org.opencontainers.image.source': 'https://github.com/securosys-com/fireblocks-external-key-store',
+		]
+		environment = [
+			'spring.config.additional-location': '/etc/app/config/',
+			'logging.config': '/etc/app/config/logback.xml',
+		]
+		volumes = [
+			'/tmp',
+			'/etc/app/config',
+		]
+	}
+	extraDirectories {
+		paths {
+			path {
+				from = 'src/main/resources/'
+				into = '/etc/app/config'
+				includes = ['logback.xml']
+			}
+		}
+	}
+	pluginExtensions {
+		pluginExtension {
+			implementation = 'com.google.cloud.tools.jib.gradle.extension.springboot.JibSpringBootExtension'
 		}
 	}
 }
