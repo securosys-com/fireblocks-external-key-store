@@ -35,7 +35,7 @@ def repositoryName = internalPrefix + 'fireblocks'
 
 jib {
 	from {
-		image = 'eclipse-temurin:21-jre-ubi9-minimal'
+		image = System.getenv('FB_DOCKER_FROM') ?: 'eclipse-temurin:21-jre-ubi9-minimal'
 		platforms {
 			platform {
 				architecture = 'amd64'
@@ -48,7 +48,8 @@ jib {
 		}
 	}
 	to {
-		image = 'securosys.jfrog.io/' + repositoryName + '/fireblocks-external-key-store'
+		// Note: the second string needs double quotes for interpolation to work
+		image = System.getenv('FB_DOCKER_TO') ?: "securosys.jfrog.io/${repositoryName}/fireblocks-external-key-store"
 		tags = ['latest', project.version]
 	}
 	container {

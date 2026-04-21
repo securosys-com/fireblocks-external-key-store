@@ -46,6 +46,15 @@ docker images
 docker run --rm -p 8080:8080 securosys.jfrog.io/internal-fireblocks/fireblocks-external-key-store:latest
 ```
 
+You can use environment variables to specify a different source image:tag as well as a target image (without tag):
+
+```sh
+export FB_DOCKER_FROM=gcr.io/distroless/java25-debian13:nonroot
+export FB_DOCKER_TO=registry.example.com/fireblocks
+
+./gradlew jibDockerBuild
+```
+
 ## Configuration
 
 The configuration options for the Securosys Custom Server are defined in the `application.yml`.
