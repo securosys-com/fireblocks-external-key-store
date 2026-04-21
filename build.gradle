@@ -31,13 +31,13 @@ allprojects {
     dependencyManagement {
         dependencies {
             dependency 'org.mariadb.jdbc:mariadb-java-client:3.5.6'
-            dependency group: 'org.postgresql', name: 'postgresql', version: '42.7.8'
+            dependency 'org.postgresql:postgresql:42.7.8'
             dependency "org.hibernate.validator:hibernate-validator:9.0.1.Final"
             dependency 'com.h2database:h2:2.4.240'
             dependency "org.flywaydb:flyway-core:11.14.0"
             dependency "org.flywaydb:flyway-mysql:11.14.0"
             dependency 'commons-codec:commons-codec:1.19.0'
-            dependency group: 'org.flywaydb', name: 'flyway-database-postgresql', version: '11.14.0'
+            dependency 'org.flywaydb:flyway-database-postgresql:11.14.0'
             dependency 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
             dependency "org.bouncycastle:bcprov-jdk18on:1.82"
             dependency 'org.bouncycastle:bcpkix-jdk18on:1.82'
