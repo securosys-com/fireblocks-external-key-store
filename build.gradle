@@ -81,10 +81,10 @@ subprojects {
     repositories {
         mavenCentral()
         maven {
-            url 'https://splunk.jfrog.io/splunk/ext-releases-local'
+            url = 'https://splunk.jfrog.io/splunk/ext-releases-local'
         }
         maven {
-            url "https://securosys.jfrog.io/artifactory/jce-maven"
+            url = "https://securosys.jfrog.io/artifactory/jce-maven"
             credentials {
                 username = project.findProperty("artifactory_user") ?: System.getenv("ARTIFACTORY_USER")
                 password = project.findProperty("artifactory_password") ?: System.getenv("ARTIFACTORY_PASSWORD")
