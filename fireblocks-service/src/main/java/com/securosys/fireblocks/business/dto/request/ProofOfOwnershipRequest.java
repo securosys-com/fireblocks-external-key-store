@@ -13,16 +13,16 @@ import lombok.Data;
 @Builder
 public class ProofOfOwnershipRequest {
 
-    @NotBlank
+    @NotEmpty
     private String assetKeyName;
 
     @NotEmpty
     @Schema(description = "The algorithm of the asset key.", example="EC", allowableValues = {"EC", "ED"})
     private String assetKeyAlgorithm;
 
-    @NotBlank
+    @NotEmpty
     private String workspaceDisplayName;
 
-    @NotBlank
+    @NotEmpty
     private String sdkApiKey;
 }

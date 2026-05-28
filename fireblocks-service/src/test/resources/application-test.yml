@@ -18,10 +18,21 @@ tsb:
 
 ##CUSTOM SERVER CONFIGURATION
 custom-server:
-  serviceName: 'SIGNING_SERVICE'  # to verify service from payload data signature in messages
-  # to verify payload signature in messages, need to be set either certificate or public key
-  fireblocksSignatureCertificate: ''
-  fireblocksSignaturePublicKey: ''
+  signatureServices:
+    signingService:
+      serviceName: 'SIGNING_SERVICE'
+      # Optional; defaults to true. Set to false to disable this Fireblocks service entry.
+      enabled: true
+      fireblocksSignatureCertificates:
+        - ''
+      fireblocksSignaturePublicKeys: []
+    configurationManager:
+      serviceName: 'CONFIGURATION_MANAGER'
+      # Optional; defaults to true. Set to false to disable this Fireblocks service entry.
+      enabled: true
+      fireblocksSignatureCertificates:
+        - ''
+      fireblocksSignaturePublicKeys: []
   verifySignatures: false
   fireblocksAgentConfiguration:
     apiAuthorization: 'my-secret-api-key-123'  #needs to be configured in fireblocks agent

@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MessageToSignIntTest extends IntTestBase {
 
     private static final String VALID_SERVICE_NAME = "SIGNING_SERVICE";
+    private static final String CONFIGURATION_MANAGER_SERVICE_NAME = "CONFIGURATION_MANAGER";
     private static final String INVALID_SERVICE_NAME = "wrong-service";
     private static final String VALID_SIGNATURE = "VALID_SIGNATURE";
     private static final String INVALID_SIGNATURE = "INVALID_SIGNATURE";
@@ -84,21 +85,21 @@ class MessageToSignIntTest extends IntTestBase {
                 .allMatch(s -> s.getStatus().equals("SIGNED"));
     }
 
-//    @Test
-//    @DisplayName("2.4.1.4 Execute EC transaction with wrong service name → should fail")
-//    void executeEcTransaction_wrongServiceName_shouldFail() {
-//
-//        ReflectionTestUtils.setField(properties, "verifySignatures", true);
-//
-//        MessagesRequest request = TestDataFactory.buildMessagesRequest(EC_KEY_ID, INVALID_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
-//
-//        MessagesStatusResponse response =
-//                TestBusinessApp.sendValidMessagesToSignRequest(request);
-//
-//        assertThat(response).isNotNull();
-//        assertThat(response.getStatuses()).isNotEmpty();
-//        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
-//    }
+    @Test
+    @DisplayName("2.4.1.4 Execute EC transaction with wrong service name → should fail")
+    void executeEcTransaction_wrongServiceName_shouldFail() {
+
+        ReflectionTestUtils.setField(properties, "verifySignatures", true);
+
+        MessagesRequest request = TestDataFactory.buildMessagesRequest(EC_KEY_ID, INVALID_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response =
+                TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
+    }
 
     @Test
     @DisplayName("2.4.1.6 Execute EC multiple messages in one transaction → should succeed")
@@ -259,6 +260,114 @@ class MessageToSignIntTest extends IntTestBase {
 
         assertThat(statusResponse).isNotNull();
         assertThat(statusResponse.getStatuses()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("2.4.1.16 Execute proof of ownership message from configuration manager → should succeed")
+    void executeProofOfOwnershipMessage_shouldSucceed() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipMessagesRequest(EC_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("SIGNED");
+        assertThat(response.getStatuses().get(0).getResponse().getSignedMessages()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("2.4.1.17 Execute nested proof of ownership message from configuration manager → should succeed")
+    void executeNestedProofOfOwnershipMessage_shouldSucceed() {
+        MessagesRequest request = TestDataFactory.buildNestedProofOfOwnershipMessagesRequest(EC_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("SIGNED");
+        assertThat(response.getStatuses().get(0).getResponse().getSignedMessages()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("2.4.1.18 Execute proof of ownership messagesToSign from configuration manager → should succeed")
+    void executeProofOfOwnershipMessagesToSign_shouldSucceed() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipMessagesToSignRequest(EC_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("SIGNED");
+        assertThat(response.getStatuses().get(0).getResponse().getSignedMessages()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("2.4.1.19 Execute ED proof of ownership message from configuration manager → should succeed")
+    void executeEdProofOfOwnershipMessage_shouldSucceed() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipMessagesRequest(ED_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_ED);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("SIGNED");
+        assertThat(response.getStatuses().get(0).getResponse().getSignedMessages()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("2.4.1.20 Execute proof of ownership message with wrong algorithm → should fail")
+    void executeProofOfOwnershipMessageWrongAlgorithm_shouldFail() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipMessagesRequest(EC_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, "WRONG_ALGORITHM");
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
+    }
+
+    @Test
+    @DisplayName("2.4.1.21 Execute proof of ownership message without signing device key → should fail")
+    void executeProofOfOwnershipMessageMissingSigningDeviceKey_shouldFail() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipWithoutSigningDeviceKeyRequest(CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
+    }
+
+    @Test
+    @DisplayName("2.4.1.22 Execute transaction from configuration manager → should fail")
+    void executeTransactionFromConfigurationManager_shouldFail() {
+        MessagesRequest request = TestDataFactory.buildMessagesRequest(EC_KEY_ID, CONFIGURATION_MANAGER_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_TX_SIGN_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
+    }
+
+    @Test
+    @DisplayName("2.4.1.23 Execute proof of ownership from signing service → should fail")
+    void executeProofOfOwnershipFromSigningService_shouldFail() {
+        MessagesRequest request = TestDataFactory.buildProofOfOwnershipMessagesRequest(EC_KEY_ID, VALID_SERVICE_NAME, VALID_SIGNATURE, ALGORITHM_EC);
+
+        MessagesStatusResponse response = TestBusinessApp.sendValidMessagesToSignRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatuses()).isNotEmpty();
+        assertThat(response.getStatuses().get(0).getType().name()).isEqualTo("KEY_LINK_PROOF_OF_OWNERSHIP_RESPONSE");
+        assertThat(response.getStatuses().get(0).getStatus()).isEqualTo("FAILED");
     }
 
 

@@ -84,6 +84,14 @@ The response contains a certificate map with the following keys:
 
 For payload verification, choose the vs (Vault Service) certificate.
 
+For Key Link onboarding proof-of-ownership callbacks, configure the Configuration Manager service separately and use the cm certificate(s). The Fireblocks Key Link Agent sends both transaction signing and proof-of-ownership requests to the same endpoint:
+
+```
+POST /v1/messagesToSign
+```
+
+The server dispatches by request type and service name: `SIGNING_SERVICE` handles `KEY_LINK_TX_SIGN_REQUEST`, and `CONFIGURATION_MANAGER` handles `KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST`.
+
 ## Running the tests
 
 To run the test suite, you need a connection to an HSM partition via the TSB.

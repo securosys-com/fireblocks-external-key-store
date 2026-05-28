@@ -40,6 +40,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TsbService {
 
+    public enum PayloadType {
+        HEX,
+        UNSPECIFIED
+    }
+
+    public enum SignatureAlgorithm {
+        NONE_WITH_ECDSA,
+        EDDSA,
+        SHA256_WITH_RSA,
+        SHA384_WITH_RSA,
+        SHA512_WITH_RSA,
+        SHA256_WITH_ECDSA
+    }
+
+    public enum SignatureType {
+        RAW
+    }
+
     private final TsbProperties tsbProperties;
     private final MtlsClientFactory mtlsClientFactory;
     private final AuthState authState;
@@ -333,7 +351,7 @@ public class TsbService {
      * @return the generated signature as a string
      * For more information, @see <a href="https://docs.securosys.com/tsb/overview">
      */
-    public String sign(String label, String password, String payload, String payloadType, String signatureType, String signatureAlgorithm, String metaData, String metaDataSignature) {
+    public String sign(String label, String password, String payload, PayloadType payloadType, SignatureType signatureType, SignatureAlgorithm signatureAlgorithm, String metaData, String metaDataSignature) {
         final Map<String, Object> signRequest = new HashMap<>();
 
         signRequest.put("payload", payload);
@@ -499,7 +517,7 @@ public class TsbService {
      * @param signatureAlgorithm the algorithm used for signing
      * For more information, @see <a href="https://docs.securosys.com/tsb/overview">
      */
-    public void syncSelfSign(String signKeyName, String password, String signatureAlgorithm) {
+    public void syncSelfSign(String signKeyName, String password, SignatureAlgorithm signatureAlgorithm) {
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);
@@ -545,7 +563,7 @@ public class TsbService {
         }
     }
 
-    public String generateCertificateRequest(String signKeyName, String password, String signatureAlgorithm) {
+    public String generateCertificateRequest(String signKeyName, String password, SignatureAlgorithm signatureAlgorithm) {
 
         // csrSignRequest
         final Map<String, Object> csrSignRequest = new HashMap<>();
@@ -599,7 +617,7 @@ public class TsbService {
         }
     }
 
-    public String generateSynchronousCertificateRequest(String signKeyName, String password, String signatureAlgorithm) {
+    public String generateSynchronousCertificateRequest(String signKeyName, String password, SignatureAlgorithm signatureAlgorithm) {
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);
@@ -650,7 +668,7 @@ public class TsbService {
     }
 
 
-    public String signCertificate(String signKeyName, String password, String signatureAlgorithm, String certificateSigningRequest) {
+    public String signCertificate(String signKeyName, String password, SignatureAlgorithm signatureAlgorithm, String certificateSigningRequest) {
         final Map<String, Object> requestBody = new HashMap<>();
 
         requestBody.put("signKeyName", signKeyName);

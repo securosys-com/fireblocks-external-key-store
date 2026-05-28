@@ -14,6 +14,7 @@ import com.securosys.fireblocks.business.dto.response.ValidationProofOfOwnership
 import com.securosys.fireblocks.business.exceptions.BusinessException;
 import com.securosys.fireblocks.business.exceptions.BusinessReason;
 import com.securosys.fireblocks.business.facade.HsmFacade;
+import com.securosys.fireblocks.business.service.TsbService.SignatureAlgorithm;
 import com.securosys.fireblocks.configuration.TsbProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,7 +74,7 @@ public class HelperService {
             }
 
         String publicKey = hsmFacade.generateKeyPair(KEY_LABEL, null, algorithm, curveOid, keySize);
-        String signatureAlgorithm = selectSignatureAlgorithm(algorithm, keySize, curveOid);
+        SignatureAlgorithm signatureAlgorithm = selectSignatureAlgorithm(algorithm, keySize, curveOid);
         tsbService.syncSelfSign(KEY_LABEL, null, signatureAlgorithm);
         return toPemFormat(publicKey);
     }
@@ -93,25 +94,25 @@ public class HelperService {
 
     public String generateCsr(CreateValidationsRequest request) {
 
-        String signatureAlgorithm = mapAlgorithmForCsr(request.getAssetKeyAlgorithm());
+        SignatureAlgorithm signatureAlgorithm = mapAlgorithmForCsr(request.getAssetKeyAlgorithm());
         return hsmFacade.generateCertificateRequest(request.getAssetKeyName(), null, signatureAlgorithm, request.getIsSkaKey());
     }
 
     public String signCsr(String csr) {
         KeyAttributesDto keyAttributes = tsbService.getPublicKey(KEY_LABEL, null);
-        String signatureAlgorithm = selectSignatureAlgorithm(keyAttributes.getAlgorithm(), keyAttributes.getKeySize(), keyAttributes.getCurveOid());
+        SignatureAlgorithm signatureAlgorithm = selectSignatureAlgorithm(keyAttributes.getAlgorithm(), keyAttributes.getKeySize(), keyAttributes.getCurveOid());
         return tsbService.signCertificate(KEY_LABEL, null, signatureAlgorithm, csr);
     }
 
-    private String mapAlgorithmForCsr(String assetKeyAlgorithm) {
+    private SignatureAlgorithm mapAlgorithmForCsr(String assetKeyAlgorithm) {
         if (assetKeyAlgorithm == null) {
             throw new BusinessException("Asset key algorithm cannot be null", BusinessReason.ERROR_INVALID_ALGORITHM);
         }
 
         return switch (assetKeyAlgorithm.toUpperCase(Locale.ROOT)) {
-            case "RSA" -> "SHA256_WITH_RSA";
-            case "EC" -> "SHA256_WITH_ECDSA";
-            case "ED" -> "EDDSA";
+            case "RSA" -> SignatureAlgorithm.SHA256_WITH_RSA;
+            case "EC" -> SignatureAlgorithm.SHA256_WITH_ECDSA;
+            case "ED" -> SignatureAlgorithm.EDDSA;
             default -> throw new BusinessException("Unsupported key algorithm: " + assetKeyAlgorithm, BusinessReason.ERROR_INVALID_ALGORITHM);
         };
     }
@@ -131,12 +132,12 @@ public class HelperService {
 
         log.info("Message to be signed for proof of ownership: {}", message);
 
-        String signatureAlgorithm = mapAlgorithmForOwnership(request.getAssetKeyAlgorithm());
+        SignatureAlgorithm signatureAlgorithm = mapAlgorithmForOwnership(request.getAssetKeyAlgorithm());
 
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
         String payloadBase64;
 
-        if ("EDDSA".equalsIgnoreCase(signatureAlgorithm)) {
+        if (signatureAlgorithm == SignatureAlgorithm.EDDSA) {
             try {
                 MessageDigest digest = MessageDigest.getInstance("SHA-256");
                 byte[] hashedMessage = digest.digest(messageBytes);
@@ -168,25 +169,25 @@ public class HelperService {
                 .build();
     }
 
-    private String mapAlgorithmForOwnership(String assetKeyAlgorithm) {
+    private SignatureAlgorithm mapAlgorithmForOwnership(String assetKeyAlgorithm) {
         if (assetKeyAlgorithm == null) {
             throw new BusinessException("Asset key algorithm cannot be null", BusinessReason.ERROR_INVALID_ALGORITHM);
         }
 
         return switch (assetKeyAlgorithm.toUpperCase(Locale.ROOT)) {
-            case "ED" -> "EDDSA";
-            case "EC", "ECDSA" -> "SHA256_WITH_ECDSA";
+            case "ED" -> SignatureAlgorithm.EDDSA;
+            case "EC", "ECDSA" -> SignatureAlgorithm.SHA256_WITH_ECDSA;
             default -> throw new BusinessException("Unsupported key algorithm: " + assetKeyAlgorithm, BusinessReason.ERROR_INVALID_ALGORITHM);
         };
     }
 
     public ValidationProofOfOwnershipResponse generateValidationProofOfOwnership(ValidationProofOfOwnershipRequest request) {
 
-        String signatureAlgorithm = mapAlgorithmForCsr(request.getAssetKeyAlgorithm());
+        SignatureAlgorithm signatureAlgorithm = mapAlgorithmForCsr(request.getAssetKeyAlgorithm());
         String csr = hsmFacade.generateCertificateRequest(request.getAssetKeyName(), null, signatureAlgorithm, request.getIsSkaKey());
 
         KeyAttributesDto keyAttributes = tsbService.getPublicKey(KEY_LABEL, null);
-        String signAlgorithm = selectSignatureAlgorithm(keyAttributes.getAlgorithm(), keyAttributes.getKeySize(), keyAttributes.getCurveOid());
+        SignatureAlgorithm signAlgorithm = selectSignatureAlgorithm(keyAttributes.getAlgorithm(), keyAttributes.getKeySize(), keyAttributes.getCurveOid());
         String signedCertPem = tsbService.signCertificate(KEY_LABEL, null, signAlgorithm, csr);
 
         ProofOfOwnershipResponse proof = generateProofOfOwnership(
@@ -206,31 +207,31 @@ public class HelperService {
                 .build();
     }
 
-    private String selectSignatureAlgorithm(String algorithm, Integer keySize, String curveOid) {
+    private SignatureAlgorithm selectSignatureAlgorithm(String algorithm, Integer keySize, String curveOid) {
 
         switch (algorithm.toUpperCase()) {
 
             case "RSA":
                 if (keySize == null || keySize <= 2048) {
-                    return "SHA256_WITH_RSA";
+                    return SignatureAlgorithm.SHA256_WITH_RSA;
                 } else if (keySize <= 3072) {
-                    return "SHA384_WITH_RSA";
+                    return SignatureAlgorithm.SHA384_WITH_RSA;
                 } else if (keySize <= 4096) {
-                    return "SHA512_WITH_RSA";
+                    return SignatureAlgorithm.SHA512_WITH_RSA;
                 } else {
-                    return "SHA512_WITH_RSA";
+                    return SignatureAlgorithm.SHA512_WITH_RSA;
                 }
 
             case "EC":
                 if (curveOid == null) {
                     throw new BusinessException("Missing curveOid for EC key", BusinessReason.ERROR_INVALID_ALGORITHM);
                 }
-                    return "SHA256_WITH_ECDSA";
+                    return SignatureAlgorithm.SHA256_WITH_ECDSA;
 
             case "ED":
                 // Ed25519
                 if ("1.3.101.112".equals(curveOid)) {
-                    return "EDDSA";
+                    return SignatureAlgorithm.EDDSA;
                 }
                 throw new BusinessException("Unsupported ED curve OID: " + curveOid,
                         BusinessReason.ERROR_INVALID_ALGORITHM);

@@ -35,7 +35,7 @@ import java.util.UUID;
 @OpenAPIDefinition(
         info = @Info(
                 title = "Fireblocks - Securosys Custom Server",
-                version = "1.0.1",
+                version = "1.0.3",
                 description = """
                         The Securosys Custom Server enables your Fireblocks workspace to use keys that
                         are securely stored in a Primus HSM.
@@ -57,7 +57,7 @@ public class MessageController extends BaseController{
     private final JsonUtil jsonUtil;
 
     @PostMapping(value = "/messagesToSign", produces = {MediaType.APPLICATION_JSON_VALUE})
-    @Operation(summary = "Send a new message to the HSM for signing",
+    @Operation(summary = "Send a new transaction or proof-of-ownership message to the HSM for signing",
             responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) },
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
                     @Content(schema = @Schema(implementation = MessagesRequest.class))}))

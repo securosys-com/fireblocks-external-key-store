@@ -12,10 +12,24 @@ tsb:
   tsbAccessToken: '<JWT Token>'
 
 custom-server:
-  # Expected service name with which the Fireblocks workspace should identify itself.
-  serviceName: ''
-  # Enforce that requests are signed by the Fireblocks workspace (for authenticity).
-  fireblocksSignatureCertificate: 'file:./etc/payload_validation_cert.pem'
+  # Fireblocks services allowed to sign payloads sent by the Key Link Agent.
+  signatureServices:
+    signingService:
+      serviceName: 'SIGNING_SERVICE'
+      # Optional; defaults to true. Set to false to disable this Fireblocks service entry.
+      enabled: true
+      # Vault Service certificate(s), used for transaction signing requests.
+      fireblocksSignatureCertificates:
+        - 'file:./etc/payload_validation_cert.pem'
+      fireblocksSignaturePublicKeys: []
+    configurationManager:
+      serviceName: 'CONFIGURATION_MANAGER'
+      # Optional; defaults to true. Set to false to disable this Fireblocks service entry.
+      enabled: true
+      # Configuration Manager certificate(s), used for proof-of-ownership onboarding requests.
+      fireblocksSignatureCertificates:
+        - ''
+      fireblocksSignaturePublicKeys: []
   fireblocksAgentConfiguration:
     # Choose a secret value. Must be non-empty.
     # Set the CUSTOMER_SERVER_AUTHORIZATION envvar in the Fireblocks Key Link Agent to the same value.

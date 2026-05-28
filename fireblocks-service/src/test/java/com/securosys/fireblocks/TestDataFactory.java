@@ -27,6 +27,70 @@ public class TestDataFactory {
         return new MessagesRequest(List.of(envelope));
     }
 
+    public static MessagesRequest buildProofOfOwnershipMessagesRequest(String signingDeviceKeyId, String serviceName, String signatureVariant, String algorithm) {
+
+        Message message = new Message(
+                new PayloadSignatureData(resolveSignature(signatureVariant), serviceName),
+                buildProofOfOwnershipPayload(signingDeviceKeyId, algorithm)
+        );
+
+        TransportMetadata metadata = new TransportMetadata(
+                UUID.randomUUID(),
+                RequestType.KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST
+        );
+
+        MessageEnvelope envelope = new MessageEnvelope(message, metadata);
+        return new MessagesRequest(List.of(envelope));
+    }
+
+    public static MessagesRequest buildNestedProofOfOwnershipMessagesRequest(String signingDeviceKeyId, String serviceName, String signatureVariant, String algorithm) {
+
+        Message message = new Message(
+                new PayloadSignatureData(resolveSignature(signatureVariant), serviceName),
+                buildNestedProofOfOwnershipPayload(signingDeviceKeyId, algorithm)
+        );
+
+        TransportMetadata metadata = new TransportMetadata(
+                UUID.randomUUID(),
+                RequestType.KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST
+        );
+
+        MessageEnvelope envelope = new MessageEnvelope(message, metadata);
+        return new MessagesRequest(List.of(envelope));
+    }
+
+    public static MessagesRequest buildProofOfOwnershipMessagesToSignRequest(String signingDeviceKeyId, String serviceName, String signatureVariant, String algorithm) {
+
+        Message message = new Message(
+                new PayloadSignatureData(resolveSignature(signatureVariant), serviceName),
+                buildProofOfOwnershipMessagesToSignPayload(signingDeviceKeyId, algorithm)
+        );
+
+        TransportMetadata metadata = new TransportMetadata(
+                UUID.randomUUID(),
+                RequestType.KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST
+        );
+
+        MessageEnvelope envelope = new MessageEnvelope(message, metadata);
+        return new MessagesRequest(List.of(envelope));
+    }
+
+    public static MessagesRequest buildProofOfOwnershipWithoutSigningDeviceKeyRequest(String serviceName, String signatureVariant, String algorithm) {
+
+        Message message = new Message(
+                new PayloadSignatureData(resolveSignature(signatureVariant), serviceName),
+                buildProofOfOwnershipPayloadWithoutSigningDeviceKey(algorithm)
+        );
+
+        TransportMetadata metadata = new TransportMetadata(
+                UUID.randomUUID(),
+                RequestType.KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST
+        );
+
+        MessageEnvelope envelope = new MessageEnvelope(message, metadata);
+        return new MessagesRequest(List.of(envelope));
+    }
+
     public static MessagesRequest buildMessagesInOneEnvelopeRequest(String signingDeviceKeyId, String serviceName, String signatureVariant, String algorithm, boolean valid) {
 
         String payload;
@@ -102,6 +166,63 @@ public class TestDataFactory {
                   }
                 }
                 """.formatted(signingDeviceKeyId, algorithm);
+    }
+
+    private static String buildProofOfOwnershipPayload(String signingDeviceKeyId, String algorithm) {
+        return """
+                {
+                  "tenantId": "0a4cc5e4-182d-5c9c-b771-c8bc8636733c",
+                  "keyId": "6ea827ed-cb5e-4e17-906c-96cc1c0f4e8c",
+                  "signingDeviceKeyId": "%s",
+                  "algorithm": "%s",
+                  "type": "KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST",
+                  "proofOfOwnershipMessage": "46697265626c6f636b737c50726f6f66206f66204f776e657273686970"
+                }
+                """.formatted(signingDeviceKeyId, algorithm);
+    }
+
+    private static String buildNestedProofOfOwnershipPayload(String signingDeviceKeyId, String algorithm) {
+        return """
+                {
+                  "tenantId": "0a4cc5e4-182d-5c9c-b771-c8bc8636733c",
+                  "keyId": "6ea827ed-cb5e-4e17-906c-96cc1c0f4e8c",
+                  "signingDeviceKeyId": "%s",
+                  "algorithm": "%s",
+                  "type": "KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST",
+                  "proofOfOwnership": {
+                    "message": "46697265626c6f636b737c50726f6f66206f66204f776e657273686970"
+                  }
+                }
+                """.formatted(signingDeviceKeyId, algorithm);
+    }
+
+    private static String buildProofOfOwnershipMessagesToSignPayload(String signingDeviceKeyId, String algorithm) {
+        return """
+                {
+                  "tenantId": "0a4cc5e4-182d-5c9c-b771-c8bc8636733c",
+                  "keyId": "6ea827ed-cb5e-4e17-906c-96cc1c0f4e8c",
+                  "signingDeviceKeyId": "%s",
+                  "algorithm": "%s",
+                  "type": "KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST",
+                  "messagesToSign": [
+                    {
+                      "message": "46697265626c6f636b737c50726f6f66206f66204f776e657273686970",
+                      "index": 0
+                    }
+                  ]
+                }
+                """.formatted(signingDeviceKeyId, algorithm);
+    }
+
+    private static String buildProofOfOwnershipPayloadWithoutSigningDeviceKey(String algorithm) {
+        return """
+                {
+                  "tenantId": "0a4cc5e4-182d-5c9c-b771-c8bc8636733c",
+                  "algorithm": "%s",
+                  "type": "KEY_LINK_PROOF_OF_OWNERSHIP_REQUEST",
+                  "proofOfOwnershipMessage": "46697265626c6f636b737c50726f6f66206f66204f776e657273686970"
+                }
+                """.formatted(algorithm);
     }
 
     private static String buildMultipleMessagesPayload(String signingDeviceKeyId, String algorithm) {

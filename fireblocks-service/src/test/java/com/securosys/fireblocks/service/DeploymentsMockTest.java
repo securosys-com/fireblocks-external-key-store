@@ -6,9 +6,9 @@ package com.securosys.fireblocks.service;
 import com.securosys.fireblocks.business.dto.response.RequestStatusResponseDto;
 import com.securosys.fireblocks.business.facade.HsmFacade;
 import com.securosys.fireblocks.business.service.TsbService;
-import com.securosys.fireblocks.business.util.CryptoUtil;
-import com.securosys.fireblocks.configuration.CustomServerProperties;
-import com.securosys.fireblocks.configuration.TsbProperties;
+import com.securosys.fireblocks.business.service.TsbService.PayloadType;
+import com.securosys.fireblocks.business.service.TsbService.SignatureAlgorithm;
+import com.securosys.fireblocks.business.service.TsbService.SignatureType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +27,6 @@ class DeploymentsMockTest {
 
     @Mock
     private TsbService tsbService;
-    @Mock
-    private CustomServerProperties properties;
-    @Mock
-    private TsbProperties tsbProperties;
-    @Mock
-    private CryptoUtil cryptoUtil;
 
     @InjectMocks
     private HsmFacade hsmFacade;
@@ -83,7 +77,7 @@ class DeploymentsMockTest {
         assertThat(result.getResult()).isNotBlank();
 
         verify(tsbService, times(2)).getRequest(fakeSignatureId);
-        verify(tsbService).sign(label, password, payload, "HEX", "RAW", "NONE_WITH_ECDSA", metadata, metadataSignature);
+        verify(tsbService).sign(label, password, payload, PayloadType.HEX, SignatureType.RAW, SignatureAlgorithm.NONE_WITH_ECDSA, metadata, metadataSignature);
     }
 
 
