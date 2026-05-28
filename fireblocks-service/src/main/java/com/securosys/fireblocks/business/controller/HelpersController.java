@@ -29,7 +29,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/v1")
 @RequiredArgsConstructor
-@Tag(name = "Helper Functions", description = "Helper functions for validation keys and asset keys (signing keys).")
+@Tag(name = "Helper Functions", description = "Helper functions for creating validation keys and asset keys (signing keys).")
 @Slf4j
 @ConditionalOnProperty(
         value = "tsb.airGapped",
@@ -41,7 +41,7 @@ public class HelpersController extends BaseController{
     private final HelperService helperService;
 
     @PostMapping(value = "/createValidationKey", produces = {MediaType.APPLICATION_JSON_VALUE})
-    @Operation(summary = "Create a validation key",
+    @Operation(summary = "Create validation key",
             description = "Creates key that can be used as the validation key."
                 + " The key label is the fixed value \"FIREBLOCKS_VALIDATION_KEY\"."
                 + " Returns the public key in PEM format. Onboard this public key to your Fireblocks workspace.",
@@ -54,7 +54,7 @@ public class HelpersController extends BaseController{
     }
 
     @PostMapping(value = "/createValidations", produces = {MediaType.APPLICATION_JSON_VALUE})
-    @Operation(summary = "Create a validation certificate",
+    @Operation(summary = "Create validation certificate",
             description = "Creates a validation certificate. The certificate is signed by the validation key."
                 + " The public key that is certified is the provided asset key (in Fireblocks' terms: signing key)."
                 + " Prerequisite: the validation key with label \"FIREBLOCKS_VALIDATION_KEY\" must exist.",
@@ -70,7 +70,7 @@ public class HelpersController extends BaseController{
 
     @PostMapping(value = "/proofOfOwnership", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
-            summary = "Create a Proof of Ownership",
+            summary = "Create Proof of Ownership",
             description = "Generates a signed Proof of Ownership message, thus confirming control over the private asset key (in Fireblocks' terms: signing key).",
             responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<ProofOfOwnershipResponse> proofOfOwnership(@Valid @RequestBody ProofOfOwnershipRequest request){
@@ -81,7 +81,7 @@ public class HelpersController extends BaseController{
 
     @PostMapping(value = "/validationAndProofOfOwnership", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
-            summary = "Create validation and Proof of Ownership in one go",
+            summary = "Create validation and Proof of Ownership",
             description = "Creates a validation certificate and a signed Proof of Ownership in a single request. See also the separate endpoints.",
             responses = { @ApiResponse(responseCode = "201", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<ValidationProofOfOwnershipResponse> validationAndProofOfOwnership(@Valid @RequestBody ValidationProofOfOwnershipRequest request){
@@ -92,8 +92,8 @@ public class HelpersController extends BaseController{
 
     @GetMapping(value = "/hsmConnectionCheck", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
-            summary = "Check TSB and HSM connectivity",
-            description = "Calls the TSB /v1/licenseInfo endpoint to verify connectivity and returns license flags.",
+            summary = "Check TSB/HSM connectivity",
+            description = "Calls the TSB /v1/licenseInfo endpoint to verify connectivity to the TSB and the HSM. Returns the license flags of the HSM partition.",
             responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<Set<String>> checkConnection() {
         return new ResponseEntity<>(helperService.isLicensed(), HttpStatus.OK);

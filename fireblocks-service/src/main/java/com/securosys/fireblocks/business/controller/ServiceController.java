@@ -23,20 +23,21 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "Service Information")
 @Slf4j
-public class ServiceController extends BaseController{
+public class ServiceController extends BaseController {
 
     private final InfoService infoService;
 
     @GetMapping(value = "/versionInfo", produces = {MediaType.APPLICATION_JSON_VALUE})
-    @Operation(summary = "Get API version",
-            description = "Returns information about the currently deployed service.",
+    @Operation(summary = "Get version",
+            description = "Returns the version of the service.",
             responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<Map<String, String>> getVersionInfo() {
         return new ResponseEntity<>(infoService.getVersion(), HttpStatus.OK);
     }
 
     @GetMapping(value = "/logs", produces = {MediaType.APPLICATION_JSON_VALUE})
-    @Operation(summary = "Get API logs",
+    @Operation(summary = "Get logs",
+            description = "Returns the backend logs of the service.",
             responses = { @ApiResponse(responseCode = "200", description = SUCCESSFUL_OPERATION) })
     public ResponseEntity<List<String>> getLogs() {
 
