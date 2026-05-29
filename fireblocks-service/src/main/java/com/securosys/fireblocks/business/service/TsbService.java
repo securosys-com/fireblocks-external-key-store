@@ -235,9 +235,7 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB get request: {}", responseBody);
-            }
+            log.debug("TSB get request status returned requestId={}, statusCode={}", requestId, statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK) {
                 handleErrorResponse(statusCode, responseBody);
@@ -249,10 +247,7 @@ public class TsbService {
             requestBody.setId(responseData.get("id").asText());
             requestBody.setStatus(responseData.get("status").asText());
             requestBody.setResult(responseData.get("result").asText());
-            if (log.isDebugEnabled()) {
-                log.debug("Status code get request is: {}", statusCode);
-                log.debug("Response JSON: {}", responseData);
-            }
+            log.debug("TSB request status parsed requestId={}, tsbStatus={}", requestBody.getId(), requestBody.getStatus());
             return requestBody;
         } catch (IOException e) {
             throw new BusinessException("Failed to get request status", BusinessReason.ERROR_GENERAL);
@@ -294,9 +289,7 @@ public class TsbService {
         final ObjectNode attributesNode = objectMapper.convertValue(attributes, ObjectNode.class);
         jsonBody.set("attributes", attributesNode);
 
-        if (log.isDebugEnabled()) {
-            log.debug("Request Securosys TSB createKey: {}", jsonBody);
-        }
+        log.debug("Creating or updating TSB key algorithm={}", keyType);
         try {
             final String jsonStr = objectMapper.writeValueAsString(jsonBody);
             final HttpPost request = new HttpPost(tsbProperties.getTsbRestApi() + "/v1/key");
@@ -307,9 +300,7 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB createKey: {}", responseBody);
-            }
+            log.debug("TSB create/update key response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -380,9 +371,8 @@ public class TsbService {
         final Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("signRequest", signRequest);
 
-        if (log.isDebugEnabled()) {
-            log.debug("Sign Request JSON: {}", requestBody);
-        }
+        log.debug("Submitting TSB sign request payloadType={}, signatureAlgorithm={}, signatureType={}",
+                payloadType, signatureAlgorithm, signatureType);
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(requestBody);
@@ -396,9 +386,7 @@ public class TsbService {
 
             JsonNode responseData = objectMapper.readTree(responseBody);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB sign: {}", responseBody);
-            }
+            log.debug("TSB sign response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -420,9 +408,7 @@ public class TsbService {
             jsonBody.put("password", password);
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Get key attributes request JSON: {}", jsonBody);
-        }
+        log.debug("Requesting TSB key attributes");
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(jsonBody);
@@ -434,9 +420,7 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB get key attributes: {}", responseBody);
-            }
+            log.debug("TSB get key attributes response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK) {
                 handleErrorResponse(statusCode, responseBody);
@@ -488,9 +472,7 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB get license: {}", responseBody);
-            }
+            log.debug("TSB get license response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK) {
                 handleErrorResponse(statusCode, responseBody);
@@ -498,10 +480,7 @@ public class TsbService {
 
             LicenseResponseDto licenseResponseDto = objectMapper.readValue(responseBody, LicenseResponseDto.class);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Status code get license is: {}", statusCode);
-                log.debug("Response licence info JSON: {}", licenseResponseDto);
-            }
+            log.debug("TSB license info parsed statusCode={}", statusCode);
             return licenseResponseDto;
         } catch (IOException e) {
             throw new BusinessException("Failed to get request status", BusinessReason.ERROR_GENERAL);
@@ -536,9 +515,7 @@ public class TsbService {
         requestBody.put("keyUsage", Collections.singletonList("KEY_CERT_SIGN"));
         requestBody.put("extendedKeyUsage", Collections.singletonList("ANY_EXTENDED_KEY_USAGE"));
 
-        if (log.isDebugEnabled()) {
-            log.debug("Self-sign Request JSON: {}", requestBody);
-        }
+        log.debug("Submitting TSB self-sign request");
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(requestBody);
@@ -550,9 +527,7 @@ public class TsbService {
             final int statusCode = (int) responseMap.get("statusCode");
             final String responseBody = (String) responseMap.get("body");
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB self-sign: {}", responseBody);
-            }
+            log.debug("TSB self-sign response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -586,9 +561,7 @@ public class TsbService {
         requestBody.put("csrSignRequest", csrSignRequest);
 
 
-        if (log.isDebugEnabled()) {
-            log.debug("Certificate Request JSON: {}", requestBody);
-        }
+        log.debug("Submitting TSB certificate request signatureAlgorithm={}", signatureAlgorithm);
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(requestBody);
@@ -602,9 +575,7 @@ public class TsbService {
 
             JsonNode responseData = objectMapper.readTree(responseBody);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB certificate request: {}", responseBody);
-            }
+            log.debug("TSB certificate request response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -636,9 +607,7 @@ public class TsbService {
         requestBody.put("keyUsage", Collections.singletonList("DIGITAL_SIGNATURE"));
         requestBody.put("extendedKeyUsage", Collections.singletonList("ANY_EXTENDED_KEY_USAGE"));
 
-        if (log.isDebugEnabled()) {
-            log.debug("Synchronous Certificate Request JSON: {}", requestBody);
-        }
+        log.debug("Submitting TSB synchronous certificate request signatureAlgorithm={}", signatureAlgorithm);
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(requestBody);
@@ -652,9 +621,7 @@ public class TsbService {
 
             JsonNode responseData = objectMapper.readTree(responseBody);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB synchronous certificate request: {}", responseBody);
-            }
+            log.debug("TSB synchronous certificate request response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -690,9 +657,7 @@ public class TsbService {
         requestBody.put("keyUsage", Collections.singletonList("DIGITAL_SIGNATURE"));
         requestBody.put("extendedKeyUsage", Collections.singletonList("ANY_EXTENDED_KEY_USAGE"));
 
-        if (log.isDebugEnabled()) {
-            log.debug("Certificate Sign Request JSON: {}", requestBody);
-        }
+        log.debug("Submitting TSB certificate sign request signatureAlgorithm={}", signatureAlgorithm);
 
         try {
             final String jsonStr = objectMapper.writeValueAsString(requestBody);
@@ -706,9 +671,7 @@ public class TsbService {
 
             JsonNode responseData = objectMapper.readTree(responseBody);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Response Securosys TSB certificate sign: {}", responseBody);
-            }
+            log.debug("TSB certificate sign response statusCode={}", statusCode);
 
             if (statusCode != HttpURLConnection.HTTP_OK && statusCode != HttpURLConnection.HTTP_CREATED) {
                 handleErrorResponse(statusCode, responseBody);
@@ -740,9 +703,7 @@ public class TsbService {
         final int statusCode = (int) responseMap.get("statusCode");
         final String responseBody = (String) responseMap.get("body");
 
-        if (log.isDebugEnabled()) {
-            log.debug("Response Securosys TSB delete key: {}", responseBody);
-        }
+        log.debug("TSB delete key response statusCode={}", statusCode);
         if (statusCode != HttpURLConnection.HTTP_OK) {
             handleErrorResponse(statusCode, responseBody);
         }

@@ -74,6 +74,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         if (headerApiKey == null || !headerApiKey.equals(configuredApiKey)) {
 //            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid API Key");
 //            return;
+            LOGGER.warn("Unauthorized request to protected endpoint: method={}, uri={}, remoteAddr={}",
+                    request.getMethod(), uri, request.getRemoteAddr());
             String msg = String.format("Unauthorized Access: A client attempted to access a restricted endpoint without proper authorization. Request-URL: '%s'", request.getRequestURL());
             jsonResponse = "{ \"errorCode\": " +HttpStatus.UNAUTHORIZED.value()+ ", \"message\": \"" + msg + "\" }";
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

@@ -99,9 +99,16 @@ public class HsmFacade {
             return false;
 
         } catch (Exception e) {
-            log.error("Signature verification failed for service: {}", serviceName, e);
+            log.warn("Signature verification failed for service={}, reason={}", serviceName, safeErrorMessage(e));
             return false;
         }
+    }
+
+    private String safeErrorMessage(Exception e) {
+        if (e instanceof BusinessException businessException) {
+            return businessException.getReason().name();
+        }
+        return e.getClass().getSimpleName();
     }
 
     private List<PublicKey> getPublicKeys(ServiceName serviceName) {

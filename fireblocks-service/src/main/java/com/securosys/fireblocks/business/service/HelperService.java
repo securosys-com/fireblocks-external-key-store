@@ -130,7 +130,7 @@ public class HelperService {
                 String.valueOf(unixTimeInSeconds)
         );
 
-        log.info("Message to be signed for proof of ownership: {}", message);
+        log.info("Generating proof of ownership, algorithm={}", request.getAssetKeyAlgorithm());
 
         SignatureAlgorithm signatureAlgorithm = mapAlgorithmForOwnership(request.getAssetKeyAlgorithm());
 
@@ -142,7 +142,7 @@ public class HelperService {
                 MessageDigest digest = MessageDigest.getInstance("SHA-256");
                 byte[] hashedMessage = digest.digest(messageBytes);
                 payloadBase64 = Base64.getEncoder().encodeToString(hashedMessage);
-                log.info("Message HEX pre-hashed with SHA-256 for EDDSA");
+                log.debug("Proof-of-ownership message pre-hashed with SHA-256 for EDDSA");
             } catch (NoSuchAlgorithmException e) {
                 throw new BusinessException("Failed to prehash HEX message for EDDSA: " + e, BusinessReason.ERROR_INVALID_ALGORITHM);
             }
@@ -156,7 +156,7 @@ public class HelperService {
 
         byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
         String signatureHex = HexFormat.of().formatHex(signatureBytes);
-        log.info("Decoded signature (HEX): {}", signatureHex);
+        log.info("Generated proof of ownership, timestamp={}", unixTimeInSeconds);
 
         return ProofOfOwnershipResponse.builder()
                 .timestamp(unixTimeInSeconds)

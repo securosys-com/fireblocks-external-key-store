@@ -93,7 +93,7 @@ public class StatusService {
                     repository.save(entity);
                 }
             } catch (Exception ex) {
-                log.warn("Failed to sync TSB status for {}: {}", requestId, ex.getMessage(), ex);
+                log.warn("Failed to sync TSB status for requestId={}, reason={}", requestId, ex.getClass().getSimpleName());
             }
         }
     }

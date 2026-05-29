@@ -55,9 +55,6 @@ public class SigningService {
             throw new BusinessException("Your current HSM subscription does not support this operation as the required flag: FIREBLOCKS_AGENT is not set", BusinessReason.ERROR_CLIENT_SUBSCRIPTION);
         }
 
-        log.info("Got request from fireblocks: {}", originalBody);
-        List<MessageStatus> statuses = new ArrayList<>();
-
         JsonNode root;
         try {
             root = objectMapper.readTree(originalBody);
@@ -66,28 +63,30 @@ public class SigningService {
         }
         ArrayNode messagesArray = (ArrayNode) root.get("messages");
         MessagesRequest request = jsonUtil.getObjectFromJsonString(originalBody, MessagesRequest.class);
+        List<MessageStatus> statuses = new ArrayList<>();
+        log.info("Received Fireblocks signing request with {} message(s)", request.getMessages().size());
 
         for (int i = 0; i < request.getMessages().size(); i++) {
             MessageEnvelope envelope = request.getMessages().get(i);
-            log.info("Message envelope: {}", envelope);
 
             JsonNode rawMessageJson = messagesArray.get(i).get("message");
             String rawPayload = rawMessageJson.get("payload").asText();
 
             UUID requestId = envelope.getTransportMetadata().getRequestId();
-            log.info("Saving message with ID: {}", requestId);
             envelopeService.save(envelope);
 
             try {
-                ServiceName serviceName = ServiceName.fromString(envelope.getMessage().getPayloadSignatureData().getService());
+                String requestedService = envelope.getMessage().getPayloadSignatureData().getService();
                 RequestType transportRequestType = envelope.getTransportMetadata().getType();
+                log.info("Received Fireblocks message requestId={}, type={}, service={}", requestId, transportRequestType, requestedService);
+
+                ServiceName serviceName = ServiceName.fromString(requestedService);
                 validateServiceCanProcessRequestType(serviceName, transportRequestType);
                 String payloadSignature = envelope.getMessage().getPayloadSignatureData().getSignature();
                 byte[] signatureBytes = HexFormat.of().parseHex(payloadSignature);
-                log.info("Raw payload: {}", rawPayload);
 
                 if (properties.isVerifySignatures() && !verifySignature(signatureBytes, serviceName, rawPayload)) {
-                    log.error("Invalid signature for requestId {}", requestId);
+                    log.warn("Invalid Fireblocks payload signature requestId={}, type={}, service={}", requestId, transportRequestType, serviceName);
                     statuses.add(buildFailedStatus(envelope, requestId));
                     continue;
                 }
@@ -110,11 +109,12 @@ public class SigningService {
                         MessagePayload.class);
                 RequestType requestType = resolveRequestType(transportRequestType, payload.getType());
 
-                log.info("Message payload: {}", payload);
-
                 List<MessageToSign> messagesToSign = resolveMessagesToSign(payload, payloadNode, requestType);
                 String signingDeviceKeyId = resolveSigningDeviceKeyId(payload, payloadNode);
                 String algorithmName = resolveAlgorithmName(payload, payloadNode);
+                log.info("Signing Fireblocks message requestId={}, type={}, service={}, messageCount={}",
+                        requestId, requestType, serviceName, messagesToSign.size());
+
                 List<SignedMessage> signedMessages = new ArrayList<>();
                 String status = MessageStatus.FAILED;
                 String tsbRequestId = "";
@@ -122,8 +122,6 @@ public class SigningService {
                 String metadataSignatureBase64 = Base64.getEncoder().encodeToString(signatureBytes);
 
                 for (MessageToSign msg : messagesToSign) {
-                    log.info("Message to sign: {}", msg);
-
                     RequestStatusResponseDto response = signWithHsm(
                             requestType,
                             signingDeviceKeyId,
@@ -131,12 +129,12 @@ public class SigningService {
                             algorithmName,
                             metadataBase64,
                             metadataSignatureBase64);
-                    log.info("TSB response: {}", response);
+                    log.info("TSB signing response requestId={}, tsbRequestId={}, tsbStatus={}",
+                            requestId, response.getId(), response.getStatus());
 
                     if (response.getResult() != null){
                         byte[] signatureResponseBytes = Base64.getDecoder().decode(response.getResult());
                         String signatureHex = HexFormat.of().formatHex(signatureResponseBytes);
-                        log.info("Decoded signature (HEX): {}", signatureHex);
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), signatureHex));
                     } else {
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), ""));
@@ -155,12 +153,13 @@ public class SigningService {
                         .response(messageResponse)
                         .build();
 
-                log.info("Saving signed message with request ID: {}, transaction ID: {} and tenant ID: {}", requestId, payload.getTxId(), payload.getTenantId());
                 statusService.save(messageStatus, tsbRequestId);
+                log.info("Saved Fireblocks message status requestId={}, type={}, status={}, tsbRequestId={}",
+                        requestId, requestType, messageStatus.getStatus(), tsbRequestId);
                 statuses.add(messageStatus);
 
             } catch (Exception ex) {
-                log.error("Failed signing for request ID: {}, reason: {}", requestId, ex.getMessage());
+                log.error("Failed signing requestId={}, reason={}", requestId, safeErrorMessage(ex));
                 statuses.add(buildFailedStatus(envelope, requestId));
             }
         }
@@ -260,12 +259,14 @@ public class SigningService {
                 String rawPayload = envelope.getMessage().getPayload();
                 String payloadSignature = envelope.getMessage().getPayloadSignatureData().getSignature();
                 byte[] signatureBytes = HexFormat.of().parseHex(payloadSignature);
-                ServiceName serviceName = ServiceName.fromString(envelope.getMessage().getPayloadSignatureData().getService());
+                String requestedService = envelope.getMessage().getPayloadSignatureData().getService();
+                ServiceName serviceName = ServiceName.fromString(requestedService);
                 RequestType transportRequestType = envelope.getTransportMetadata().getType();
+                log.info("Picked up pending Fireblocks message requestId={}, type={}, service={}", requestId, transportRequestType, requestedService);
                 validateServiceCanProcessRequestType(serviceName, transportRequestType);
 
                 if (properties.isVerifySignatures() && !verifySignature(signatureBytes, serviceName, rawPayload)) {
-                    log.error("Invalid signature for requestId {}", requestId);
+                    log.warn("Invalid Fireblocks payload signature requestId={}, type={}, service={}", requestId, transportRequestType, serviceName);
                     buildFailedStatus(envelope, requestId);
                     continue;
                 }
@@ -304,10 +305,11 @@ public class SigningService {
                             algorithmName,
                             metadataBase64,
                             metadataSignatureBase64);
+                    log.info("TSB signing response requestId={}, tsbRequestId={}, tsbStatus={}",
+                            requestId, response.getId(), response.getStatus());
                     if (response.getResult() != null){
                         byte[] signatureResponseBytes = Base64.getDecoder().decode(response.getResult());
                         String signatureHex = HexFormat.of().formatHex(signatureResponseBytes);
-                        log.info("Decoded signature (HEX): {}", signatureHex);
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), signatureHex));
                     } else {
                         signedMessages.add(new SignedMessage(msg.getMessage(), msg.getIndex(), ""));
@@ -319,22 +321,24 @@ public class SigningService {
 
                 messageStatus.setStatus(status);
                 messageStatus.setResponse(new MessageResponse(signedMessages));
-                log.info("Saving signed message with request ID: {}, transaction ID: {} and tenant ID: {}", requestId, payload.getTxId(), payload.getTenantId());
                 statusService.save(messageStatus, tsbRequestId);
+                log.info("Saved pending Fireblocks message status requestId={}, type={}, status={}, tsbRequestId={}",
+                        requestId, requestType, messageStatus.getStatus(), tsbRequestId);
 
             } catch (Exception ex) {
-
-                if (ex instanceof BusinessException) {
-                    log.error("Failed signing for request ID: {}", ex.getMessage());
-                } else {
-                    log.error("Failed signing for request ID: {}", requestId);
-                }
+                log.error("Failed signing pending requestId={}, reason={}", requestId, safeErrorMessage(ex));
                 messageStatus.setStatus(MessageStatus.FAILED);
                 messageStatus.setResponse(new MessageResponse(null));
                 statusService.save(messageStatus, "unknown");
-                log.error("Signing failed for requestId {}", requestId);
             }
         }
+    }
+
+    private String safeErrorMessage(Exception ex) {
+        if (ex instanceof BusinessException) {
+            return ex.getMessage();
+        }
+        return ex.getClass().getSimpleName();
     }
 
     private RequestStatusResponseDto signWithHsm(RequestType requestType,
