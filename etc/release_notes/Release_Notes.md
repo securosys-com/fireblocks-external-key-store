@@ -22,6 +22,8 @@ Improved:
 - Isolated certificate verification per Fireblocks service so Configuration Manager certificates are not mixed with Signing Service certificates.
 - Kept backward compatibility for the legacy single-service signature verification configuration.
 - Updated configuration templates and documentation for the new service-specific signature verification setup.
+- Sanitized production logging to avoid writing API credentials, Fireblocks transaction payloads, proof-of-ownership messages, signatures, key labels, and raw TSB request/response bodies to logs. 
+Operational logs still include request IDs, service names, request types, status changes, and safe warnings for authorization, mTLS, service configuration, and signature verification failures.
 
 Tests:
 
