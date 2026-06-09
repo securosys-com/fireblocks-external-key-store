@@ -1,7 +1,35 @@
+// All dependencies AND Gradle plugins resolve through the single `maven-dev` virtual on
+// JFrog (central + splunk + gradle-plugins remotes + internal + customer locals). No direct
+// mavenCentral()/gradlePluginPortal() — internal builds go through JFrog (reproducibility, CRA).
+//
+// Credentials use Gradle's standard PasswordCredentials: the repository is named `mavenDev`,
+// so Gradle reads the `mavenDevUsername` / `mavenDevPassword` properties. Put them in
+// ~/.gradle/gradle.properties (never this file); CI supplies them as the env vars
+// ORG_GRADLE_PROJECT_mavenDevUsername / ORG_GRADLE_PROJECT_mavenDevPassword.
+// (pluginManagement {} must be the first statement, so the block is repeated rather than shared.)
 pluginManagement {
     repositories {
-        mavenCentral()
-        gradlePluginPortal()
+        maven {
+            name = 'mavenDev'
+            url = uri('https://securosys.jfrog.io/artifactory/maven-dev')
+            credentials(PasswordCredentials)
+        }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)   // no subproject re-adds mavenCentral()
+    repositories {
+        maven {
+            name = 'mavenDev'
+            url = uri('https://securosys.jfrog.io/artifactory/maven-dev')
+            credentials(PasswordCredentials)
+        }
+    }
+    versionCatalogs {
+        create('libs') {
+            from("com.securosys:securosys-version-catalog:${providers.gradleProperty('securosysBomVersion').get()}")
+        }
     }
 }
 
