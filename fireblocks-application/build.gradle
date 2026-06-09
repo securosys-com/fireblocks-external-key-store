@@ -8,13 +8,13 @@ plugins {
 }
 
 dependencies {
-	implementation libs.spring.boot.starter
-	implementation libs.spring.boot.starter.web
-	implementation libs.spring.boot.starter.security
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation project(path: ':fireblocks-service')
 
-	runtimeOnly libs.h2
-	runtimeOnly libs.mariadb.java.client
+	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 }
 
 tasks.named('assemble').configure {
