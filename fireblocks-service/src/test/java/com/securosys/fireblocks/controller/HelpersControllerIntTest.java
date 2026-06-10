@@ -14,8 +14,10 @@ import com.securosys.fireblocks.business.dto.response.CreateValidationKeyRespons
 import com.securosys.fireblocks.business.dto.response.CreateValidationResponse;
 import com.securosys.fireblocks.business.dto.response.ProofOfOwnershipResponse;
 import com.securosys.fireblocks.business.dto.response.ValidationProofOfOwnershipResponse;
+import com.securosys.fireblocks.business.exceptions.BusinessException;
 import com.securosys.fireblocks.business.exceptions.BusinessReason;
 import com.securosys.fireblocks.business.service.TsbService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,35 @@ class HelpersControllerIntTest extends IntTestBase {
     private static final String SDK_API_KEY = "test-sdk-api-key";
     private static final String AGENT_ID = "test-agent-id";
 
+    /**
+     * Each test owns the validation key's lifecycle: it establishes its own precondition (key absent,
+     * or freshly created via {@link #ensureValidationKey(String)}) and this teardown removes it
+     * afterwards. This keeps the suite independent of any pre-seeded validation key on the partition.
+     * The asset keys ({@code fireblocksTestEc}/{@code fireblocksTestEd}) are external partition
+     * fixtures — referenced but never created here — so they are intentionally left untouched.
+     */
+    @AfterEach
+    void cleanupValidationKey() {
+        deleteValidationKeyIfPresent();
+    }
+
+    /** Best-effort delete so a test can start from a known "key absent" state; an absent key is fine. */
+    private void deleteValidationKeyIfPresent() {
+        try {
+            tsbService.deleteKey(VALIDATION_KEY);
+        } catch (BusinessException ignored) {
+            // Key not present — already in the desired state, nothing to clean up.
+        }
+    }
+
+    /** Ensure the validation key exists for flows that read it (createValidations / proof-of-ownership). */
+    private void ensureValidationKey(String algorithm) {
+        deleteValidationKeyIfPresent();
+        CreateValidationKeyRequest request = new CreateValidationKeyRequest();
+        request.setAlgorithm(algorithm);
+        TestBusinessApp.sendValidCreateValidationKeyRequest(request);
+    }
+
     @Test
     @DisplayName("2.5.1.1 Execute get logs → should succeed")
     void executeGetLogs_shouldSucceed() {
@@ -60,7 +91,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.3 Execute create validation key → should succeed")
     void executeCreateValidationKey_shouldSucceed() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest request  = new CreateValidationKeyRequest();
         request.setAlgorithm("RSA");
         CreateValidationKeyResponse response = TestBusinessApp.sendValidCreateValidationKeyRequest(request);
@@ -71,7 +102,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.4 Execute create validation key when it already exists → should fail")
     void executeCreateValidationKey_shouldFailAlreadyExists() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest request  = new CreateValidationKeyRequest();
         request.setAlgorithm("RSA");
         TestBusinessApp.sendValidCreateValidationKeyRequest(request);
@@ -86,7 +117,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.5 Execute create validation with EC key → should succeed")
     void executeCreateValidationEC_shouldSucceed() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
         keyRequest.setAlgorithm("EC");
         keyRequest.setCurveOid("1.3.132.0.10");
@@ -124,6 +155,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.7 Execute create proof of ownership + validation → should succeed")
     void executeProofOfOwnershipAndValidationEC_shouldSucceed() {
+        ensureValidationKey("RSA");
 
         ValidationProofOfOwnershipRequest request = ValidationProofOfOwnershipRequest.builder()
                 .assetKeyName(TEST_KEY_EC)
@@ -148,7 +180,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.8 Execute create validation with invalid key → should fail")
     void executeCreateValidationWithInvalidKey_shouldFail() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
         keyRequest.setAlgorithm("RSA");
         TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
@@ -206,7 +238,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.11 Execute create validation with ED key → should succeed")
     void executeCreateValidationED_shouldSucceed() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
         keyRequest.setAlgorithm("ED");
         keyRequest.setCurveOid("1.3.101.112");
@@ -226,7 +258,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.12 Execute create validation with invalid algorithm → should fail")
     void executeCreateValidationWithInvalidAlgorithm_shouldFail() {
-        tsbService.deleteKey(VALIDATION_KEY);
+        deleteValidationKeyIfPresent();
         CreateValidationKeyRequest keyRequest = new CreateValidationKeyRequest();
         keyRequest.setAlgorithm("RSA");
         TestBusinessApp.sendValidCreateValidationKeyRequest(keyRequest);
@@ -282,6 +314,7 @@ class HelpersControllerIntTest extends IntTestBase {
     @Test
     @DisplayName("2.5.1.15 Execute create proof of ownership + validation with ED key → should succeed")
     void executeProofOfOwnershipAndValidationED_shouldSucceed() {
+        ensureValidationKey("RSA");
 
         ValidationProofOfOwnershipRequest request = ValidationProofOfOwnershipRequest.builder()
                 .assetKeyName(TEST_KEY_ED)
