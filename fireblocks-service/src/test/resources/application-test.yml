@@ -40,7 +40,7 @@ custom-server:
 
 spring:
   main.banner-mode: off
-  data.rest.basePath: /api
+  data.rest.detection-strategy: annotated
   jpa.open-in-view: false
   jackson.serialization.FAIL_ON_EMPTY_BEANS: false
   jmx.enabled: false

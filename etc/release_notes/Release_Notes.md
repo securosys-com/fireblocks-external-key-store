@@ -2,6 +2,19 @@
 
 EULA: <https://www.securosys.com/eula>
 
+## 1.0.4 (2026-10-05)
+
+### Security
+
+- **Hardening default config**
+
+  Spring Data REST now exports only explicitly annotated repositories.
+
+### Compatibility
+
+This will be the last planned release based on Spring Boot 3.x. The next
+release is planned for Spring Boot 4.x.
+
 ## 1.0.3 (2026-05-28)
 
 Added:
