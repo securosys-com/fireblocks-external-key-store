@@ -29,12 +29,6 @@ include:
     inputs:
       stage: build
 
-  # Scan internal images
-  - component: ${CI_SERVER_FQDN}/application/generic-deployment-script/docker-scout@714b4dc6157dfe8b7ea6573e9f3d5beda9c4fc9c
-    inputs:
-      stage: vulnerability_scan
-      image: "${JFROG_ARTIFACTORY_URL}/internal-${JFROG_REPOSITORY_REAL_NAME}/${DOCKER_IMAGE_NAME}:latest"
-
   - component: ${CI_SERVER_FQDN}/application/generic-deployment-script/publish-config-zip@master
     inputs:
       stage: publish_config_zip
