@@ -35,7 +35,7 @@ def repositoryName = internalPrefix + 'fireblocks'
 
 jib {
 	from {
-		image = System.getenv('FB_DOCKER_FROM') ?: 'eclipse-temurin:21-jre-ubi9-minimal'
+		image = System.getenv('FB_DOCKER_FROM') ?: 'eclipse-temurin:21-jre-ubi9-minimal@sha256:473f06a821e185f5ab9047d4d70778c4eccaaeb303b3495001acbd93ff661b1f'
 		platforms {
 			platform {
 				architecture = 'amd64'
