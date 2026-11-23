@@ -8,7 +8,7 @@ EULA: <https://www.securosys.com/eula>
 
 - **Java4Shell (CVE-2026-114938) fixed**
 
-  Updated the runtime base image to Temurin 17.0.21.1+2, which contains the fix.
+  Updated the runtime base image to Temurin 21.0.13.1, which contains the fix.
 
 - **Apache Tomcat updated to 10.1.61**
 
