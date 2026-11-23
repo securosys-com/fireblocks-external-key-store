@@ -2,6 +2,23 @@
 
 EULA: <https://www.securosys.com/eula>
 
+## 1.0.5 (2026-11-23)
+
+### Security
+
+- **Java4Shell (CVE-2026-114938) fixed**
+
+  Updated the runtime base image to Temurin 17.0.21.1+2, which contains the fix.
+
+- **Apache Tomcat updated to 10.1.61**
+
+  Fixes CVE-2026-101296, CVE-2026-101356, CVE-2026-88041 and CVE-2026-93446.
+
+- **Base image operating system packages updated**
+
+  Fixes CVE-2026-111497 (brotli), CVE-2026-66046, CVE-2026-76956, CVE-2026-76957,
+  CVE-2026-77214, CVE-2026-93990 and CVE-2026-102633 (expat), and CVE-2026-85091 (zlib).
+
 ## 1.0.4 (2026-10-05)
 
 ### Security
